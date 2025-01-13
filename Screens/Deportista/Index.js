@@ -1,44 +1,100 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import Create from './Create'; 
+import EditarDeportista from './Edit';
+import DetailsDeportista from './Details';
+import DeleteDeportista from './Delete';
 
-const Index = () => {
+import api from '../../services/api';
+
+const Index = ({navigation}) => {
   const [deportistas, setDeportistas] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAdminOrEntrenador, setIsAdminOrEntrenador] = useState(false); // Simulando User.IsInRole
-  const [listaCategorias, setListaCategorias] = useState([]);
-  const [listaClubes, setListaClubes] = useState([]);
-  const [listaEntrenadores, setListaEntrenadores] = useState([]);
-  const [listaGeneros, setListaGeneros] = useState([]);
-  const [listaProvincias, setListaProvincias] = useState([]);
-  const [listaUsuarios, setListaUsuarios] = useState([]);
+  const [isAdminOrEntrenador, setIsAdminOrEntrenador] = useState(false);
 
   useEffect(() => {
     // Llamar a la API para obtener datos
     loadDeportistas();
-    loadListaCategorias();
-    loadListaClubes();
-    loadListaEntrenadores();
-    loadListaGeneros();
-    loadListaProvincias();
-    loadListaUsuarios();
+    loadCategoria();
+    
     checkUserRole(); // Simulando User.IsInRole
   }, []);
 
   const loadDeportistas = async () => {
-    // Llamar a la API para obtener deportistas
-    const response = await fetch('https://tu-api.com/deportistas');
-    const data = await response.json();
-    setDeportistas(data);
+    try {
+      const response = await api.get('/api/Deportista'); // Llamada a la API para obtener deportistas
+      const deportistasConDetalles = await Promise.all(response.data.map(async (deportista) => {
+      // Obtener detalles asociados a cada deportista usando sus ids
+      const categoria = await loadCategoria(deportista.idCat);
+      const club = await loadClub(deportista.idClub);
+      const entrenador = await loadEntrenador(deportista.idEnt);
+      const genero = await loadGenero(deportista.idGen);
+      const provincia = await loadProvincia(deportista.idPro);
+              
+      return {
+        ...deportista,
+        idCatNavigation: categoria,
+        idClubNavigation: club,
+        idEntNavigation: entrenador,
+        idGenNavigation: genero,
+        idProNavigation: provincia
+      };
+      }));
+      setDeportistas(deportistasConDetalles);
+    } catch (error) {
+      console.error('Error cargando deportistas:', error);
+    }
   };
 
-  const loadListaCategorias = async () => {
-    // Llamar a la API para obtener categorías
-    const response = await fetch('https://tu-api.com/categorias');
-    const data = await response.json();
-    setListaCategorias(data);
+  const loadCategoria = async (idCat) => {
+    try {
+      const response = await api.get(`/api/Categoria/${idCat}`);
+      // Solo devolver el id y nombre de la categoría
+      return response.data ? { idCat: response.data.idCat, nombreCat: response.data.nombreCat } : { idCat: null, nombreCat: 'Sin categoría' };
+    } catch (error) {
+      return { idCat: null, nombreCat: 'Sin categoría' };
+    }
   };
-
-  // Repetir para cada lista (clubes, entrenadores, géneros, provincias, usuarios)
+  
+  const loadClub = async (idClub) => {
+    try {
+      const response = await api.get(`/api/Club/${idClub}`);
+      // Solo devolver el nombre del club
+      return response.data ? { idClub: response.data.idClub, nombreClub: response.data.nombreClub } : { idClub: null, nombreClub: 'Sin club' };
+    } catch (error) {
+      return { idClub: null, nombreClub: 'Sin club' };
+    }
+  };
+  
+  const loadEntrenador = async (idEnt) => {
+    try {
+      const response = await api.get(`/api/Entrenador/${idEnt}`);
+      // Solo devolver el nombre y apellido del entrenador
+      return response.data ? { idEnt: response.data.idEnt, nombreEnt: `${response.data.nombresEnt} ${response.data.apellidosEnt}` } : { idEnt: null, nombreEnt: 'Sin entrenador' };
+    } catch (error) {
+      return { idEnt: null, nombreEnt: 'Sin entrenador' };
+    }
+  };
+  
+  const loadGenero = async (idGen) => {
+    try {
+      const response = await api.get(`/api/Genero/${idGen}`);
+      // Solo devolver el nombre del género
+      return response.data ? { idGen: response.data.idGen, nombreGen: response.data.nombreGen } : { idGen: null, nombreGen: 'Sin género' };
+    } catch (error) {
+      return { idGen: null, nombreGen: 'Sin género' };
+    }
+  };
+  
+  const loadProvincia = async (idPro) => {
+    try {
+      const response = await api.get(`/api/Provincia/${idPro}`);
+      // Solo devolver el nombre de la provincia
+      return response.data ? { idPro: response.data.idPro, nombrePro: response.data.nombrePro } : { idPro: null, nombrePro: 'Sin provincia' };
+    } catch (error) {
+      return { idPro: null, nombrePro: 'Sin provincia' };
+    }
+  };
 
   const checkUserRole = () => {
     // Simulando la verificación de rol
@@ -46,15 +102,37 @@ const Index = () => {
   };
 
   const handleSearch = () => {
-    // Implementar lógica de búsqueda
+    const filtered = deportistas.filter(deportista => 
+      deportista.NombresDep.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      deportista.ApellidosDep.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      deportista.CedulaDep.includes(searchQuery)
+    );
+    setDeportistas(filtered);
+  };
+
+  const handleCreate = () => {
+    navigation.navigate('CreateDeportista'); // Redirigir a CrearDeportista
+  };
+
+  const handleEdit = (idDep) => {
+    navigation.navigate('EditDeportista', { idDep }); // Redirigir a EditarDeportista con parámetros
+  };
+
+  const handleDetails = (idDep) => {
+    navigation.navigate('DetailsDeportista', { idDep }); // Redirigir a DetallesDeportista con parámetros
+  };
+
+  const handleDisable = (idDep) => {
+    // Aquí puedes agregar la lógica para deshabilitar el deportista
+    navigation.navigate('DeleteDeportista', { idDep });
   };
 
   return (
-    <View>
+    <View style={styles.container}>
       {isAdminOrEntrenador && (
-        <View>
-          <Text>ADMINISTRACIÓN DE DEPORTISTAS</Text>
-          <Button title="Crear" onPress={() => console.log('Crear deportista')} />
+        <View style={styles.adminSection}>
+          <Text style={styles.adminTitle}>ADMINISTRACIÓN DE DEPORTISTAS</Text>
+          <Button title="Crear" onPress={handleCreate} />
         </View>
       )}
 
@@ -62,63 +140,109 @@ const Index = () => {
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Buscar ..."
+        style={styles.searchInput}
       />
-      <Button title="Buscar" onPress={handleSearch} />
+      <Button title="Buscar" onPress={handleSearch} style={styles.searchButton} />
 
       <FlatList
         data={deportistas}
-        renderItem={({ item }) => (
-          <View>
-            <Text>Nombres: {item.NombresDep}</Text>
-            <Text>Apellidos: {item.ApellidosDep}</Text>
-            <Text>Cédula: {item.CedulaDep}</Text>
+        renderItem={({ item }) => {
+          return (
+            <View style={styles.itemContainer}>
+              <Text style={styles.itemText}>Nombres: {item.nombresDep}</Text>
+              <Text style={styles.itemText}>Apellidos: {item.apellidosDep}</Text>
+              <Text style={styles.itemText}>Cédula: {item.cedulaDep}</Text>
 
-            <Text>Categoría: 
-              {listaCategorias.find((categoria) => categoria.IdCat === item.IdCat)?.NombreCat}
-            </Text>
+              <Text style={styles.itemText}>Categoría: {item.idCatNavigation.nombreCat || 'Sin categoría'}</Text>
+              <Text style={styles.itemText}>Club: {item.idClubNavigation.nombreClub || 'Sin club'}</Text>
+              <Text style={styles.itemText}>Entrenador: {item.idEntNavigation.nombreEnt || 'Sin entrenador'}</Text>
+              <Text style={styles.itemText}>Género: {item.idGenNavigation.nombreGen || 'Sin género'}</Text>
+              <Text style={styles.itemText}>Provincia: {item.idProNavigation.nombrePro || 'Sin provincia'}</Text>
+              <Text style={styles.itemText}>Estado: {item.activoDep ? 'Activo' : 'Inactivo'}</Text>
 
-            <Text>Club: 
-              {listaClubes.find((club) => club.IdClub === item.IdClub)?.NombreClub}
-            </Text>
-
-            <Text>Entrenador: 
-              {listaEntrenadores.find((entrenador) => entrenador.IdEnt === item.IdEnt)?.NombresEnt} 
-              {listaEntrenadores.find((entrenador) => entrenador.IdEnt === item.IdEnt)?.ApellidosEnt}
-            </Text>
-
-            <Text>Género: 
-              {listaGeneros.find((genero) => genero.IdGen === item.IdGen)?.NombreGen}
-            </Text>
-
-            <Text>Provincia: 
-              {listaProvincias.find((provincia) => provincia.IdPro === item.IdPro)?.NombrePro}
-            </Text>
-
-            <Text>Usuario: 
-              {listaUsuarios.find((usuario) => usuario.IdUsu === item.IdUsu)?.NombreUsu}
-            </Text>
-
-            <Text>Estado: {item.ActivoDep ? 'Activo' : 'Inactivo'}</Text>
-
-            {isAdminOrEntrenador && (
-              <View>
-                <TouchableOpacity onPress={() => console.log('Editar deportista')}>
-                  <Text>Editar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => console.log('Detalles deportista')}>
-                  <Text>Detalles</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => console.log('Deshabilitar deportista')}>
-                  <Text>Deshabilitar</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
-        keyExtractor={item => item.IdDep.toString()}
+              {isAdminOrEntrenador && (
+                <View style={styles.buttonsContainer}>
+                  <TouchableOpacity onPress={() => handleEdit(item.idDep)} style={[styles.button, styles.editButton]}>
+                    <Text style={styles.buttonText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDetails(item.idDep)} style={[styles.button, styles.detailsButton]}>
+                    <Text style={styles.buttonText}>Detalles</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDisable(item.idDep)} style={[styles.button, styles.disableButton]}>
+                    <Text style={styles.buttonText}>Deshabilitar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          );
+        }}
+        keyExtractor={item => item.IdDep ? item.IdDep.toString() : String(item.id || Math.random())}
       />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 10,
+  },
+  adminSection: {
+    marginBottom: 15,
+  },
+  adminTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginVertical: 10,
+    borderRadius: 5,
+  },
+  searchButton: {
+    marginTop: 10,
+  },
+  itemContainer: {
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  itemText: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  button: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    flex: 1,
+  },
+  editButton: {
+    backgroundColor: '#4CAF50',
+    marginRight: 5,
+  },
+  detailsButton: {
+    backgroundColor: '#2196F3',
+    marginHorizontal: 5,
+  },
+  disableButton: {
+    backgroundColor: '#f44336',
+    marginLeft: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+});
 
 export default Index;

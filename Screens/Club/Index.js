@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Alert, TextInput, Button } from 'react-native';
+import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
 import api from '../../services/api'; // Asegúrate de importar tu instancia de API
 
 const Index = () => {
+  const navigation = useNavigation(); // Inicializa useNavigation
   const [clubes, setClubes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,6 +39,8 @@ const Index = () => {
     };
 
     fetchClubes();
+    console.warn("***************************************");
+    console.warn(JSON.stringify(clubes));
   }, []);
 
   const handleCreateClub = async () => {
@@ -52,7 +56,7 @@ const Index = () => {
   };
 
   const handleEditClub = (id) => {
-    navigation.navigate('EditarClub', { idClub: id });
+    navigation.navigate('EditarClub', { idClub: id }); // Navega a la pantalla de edición
   };
 
   const handleDeleteClub = async (id) => {
@@ -84,14 +88,20 @@ const Index = () => {
       <Text style={styles.value}>{item.nombreClub}</Text>
       <Text style={styles.label}>Deportistas:</Text>
       {Array.isArray(deportistas[item.idClub]) && deportistas[item.idClub].length > 0 ? (
-        deportistas[item.idClub].map((deportista) => (
-          <Text key={deportista.id} style={styles.value}>
+        deportistas[item.idClub].map((deportista, index) => (
+          <Text key={index} style={styles.value}>
             {deportista.nombresDep} {deportista.apellidosDep}
           </Text>
         ))
       ) : (
         <Text>No hay deportistas disponibles.</Text>
       )}
+      
+      {/* Botones para Editar y Eliminar */}
+      <View style={styles.buttonContainer}>
+        <Button title="Editar" onPress={() => handleEditClub(item.idClub)} />
+        <Button title="Eliminar" onPress={() => handleDeleteClub(item.idClub)} color="red" />
+      </View>
     </View>
   );
 
@@ -125,12 +135,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
     width: '100%',
+    marginBottom: 10,
   },
   label: {
     fontWeight: 'bold',
   },
   value: {
     marginBottom: 10,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
   },
 });
 

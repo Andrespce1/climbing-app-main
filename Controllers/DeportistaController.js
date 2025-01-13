@@ -15,7 +15,7 @@ const DeportistaController = () => {
   const [listaEstados, setListaEstados] = useState([]);
 
   useEffect(() => {
-    axios.get('/api/deportistas')
+    axios.get('/api/Deportista')
       .then(response => {
         setDeportista(response.data);
       })
