@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Alert, TextInput, Button } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
 import api from '../../services/api'; // Asegúrate de importar tu instancia de API
 
-const Index = () => {
+const IndexClub = () => {
   const navigation = useNavigation(); // Inicializa useNavigation
   const [clubes, setClubes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [deportistas, setDeportistas] = useState({}); // Estado para almacenar deportistas por club
   const [newClubName, setNewClubName] = useState('');
 
   useEffect(() => {
@@ -16,20 +15,7 @@ const Index = () => {
       try {
         const response = await api.get('/api/Club'); // Cambia según tu API
         console.log('Respuesta de la API:', response.data); // Imprime la respuesta
-        setClubes(response.data);
-
-        // Llamar a la API para obtener deportistas por cada club
-        for (const club of response.data) {
-          const deportistaResponse = await api.get(`/api/Club/ListaDeportistas/${club.idClub}`);
-          console.log('Respuesta Deportistas:', deportistaResponse.data); // Imprime la respuesta de deportistas
-
-          // Verifica si deportistaResponse.data es un array
-          if (Array.isArray(deportistaResponse.data)) {
-            setDeportistas(prev => ({ ...prev, [club.idClub]: deportistaResponse.data }));
-          } else {
-            console.error('La respuesta no es un array:', deportistaResponse.data);
-          }
-        }
+        setClubes(response.data);        
       } catch (err) {
         console.error(err);
         setError('Error al cargar los clubes');
@@ -39,8 +25,6 @@ const Index = () => {
     };
 
     fetchClubes();
-    console.warn("***************************************");
-    console.warn(JSON.stringify(clubes));
   }, []);
 
   const handleCreateClub = async () => {
@@ -55,52 +39,83 @@ const Index = () => {
     }
   };
 
-  const handleEditClub = (id) => {
-    navigation.navigate('EditarClub', { idClub: id }); // Navega a la pantalla de edición
-  };
+  const handleEditClub = (idClub) => {
+    const club = clubes.find(e => e.idClub === idClub);
 
-  const handleDeleteClub = async (id) => {
-    try {
-      await api.delete(`/api/Club/${id}`);
-      setClubes(clubes.filter(club => club.idClub !== id));
-      Alert.alert('Éxito', 'Club eliminado con éxito');
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'No se pudo eliminar el club');
+    if (club) {
+      console.log('Club encontrado:', club); // Verifica que se haya encontrado
+      navigation.navigate('ClubEdit', { club }); // Pasa el objeto completo
+    } else {
+      console.error('Entrenador no encontrado con ID:', idClub);
     }
   };
 
+  const handleDetailsClub = (idClub) => {
+    const club = clubes.find(c => c.idClub === idClub);
+    if (club) {
+      navigation.navigate('ClubDetails', { club }); // Pasa el objeto deportista completo
+    } else {
+      console.error('Club no encontrado con ID:', idClub);
+    }
+  };
+
+  const handleDeleteClub = (id) => {
+    // Muestra una alerta de confirmación
+    Alert.alert(
+      'Confirmar Eliminación',
+      '¿Estás seguro de que deseas eliminar este Club?',
+      [
+        {
+          text: 'Cancelar',
+          onPress: () => console.log('Eliminación cancelada'),
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/Club/${id}`);
+              setClubes(clubes.filter(c => c.idClub !== id));
+              Alert.alert('Éxito', 'Club eliminado con éxito');
+            } catch (err) {
+              console.error(err);
+              Alert.alert('Error', 'No se pudo eliminar el Club porque tiene deportistas asociados');
+            }
+          },
+        },
+      ],
+      { cancelable: false } // Evita que se cierre al tocar fuera del diálogo
+    );
+  };
+
   if (loading) {
-    return <Text>Cargando...</Text>;
+    return <Text style={styles.loadingText}>Cargando...</Text>;
   }
 
   if (error) {
-    return <Text>{error}</Text>;
+    return <Text style={styles.errorText}>{error}</Text>;
   }
 
   if (!clubes || clubes.length === 0) {
-    return <Text>No hay clubes disponibles.</Text>;
+    return <Text style={styles.emptyText}>No hay clubes disponibles.</Text>;
   }
 
   const renderItem = ({ item }) => (
     <View style={styles.club}>
       <Text style={styles.label}>Nombre del Club:</Text>
       <Text style={styles.value}>{item.nombreClub}</Text>
-      <Text style={styles.label}>Deportistas:</Text>
-      {Array.isArray(deportistas[item.idClub]) && deportistas[item.idClub].length > 0 ? (
-        deportistas[item.idClub].map((deportista, index) => (
-          <Text key={index} style={styles.value}>
-            {deportista.nombresDep} {deportista.apellidosDep}
-          </Text>
-        ))
-      ) : (
-        <Text>No hay deportistas disponibles.</Text>
-      )}
       
       {/* Botones para Editar y Eliminar */}
       <View style={styles.buttonContainer}>
-        <Button title="Editar" onPress={() => handleEditClub(item.idClub)} />
-        <Button title="Eliminar" onPress={() => handleDeleteClub(item.idClub)} color="red" />
+        <TouchableOpacity style={styles.button} onPress={() => handleEditClub(item.idClub)}>
+          <Text style={styles.buttonText}>Editar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handleDetailsClub(item.idClub)}>
+          <Text style={styles.buttonText}>Detalles</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={() => handleDeleteClub(item.idClub)}>
+          <Text style={styles.buttonText}>Eliminar</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -111,6 +126,7 @@ const Index = () => {
         data={clubes}
         keyExtractor={(item) => item.idClub.toString()}
         renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 20 }} // Añadir espacio en la parte inferior
       />
       
       <TextInput
@@ -120,7 +136,9 @@ const Index = () => {
         onChangeText={setNewClubName}
       />
       
-      <Button title="Crear Club" onPress={handleCreateClub} />
+      <TouchableOpacity style={styles.createButton} onPress={handleCreateClub}>
+        <Text style={styles.createButtonText}>Crear Club</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -129,32 +147,78 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 18,
+    marginTop: 20,
+  },
+  errorText: {
+    textAlign: 'center',
+    color: 'red',
+    fontSize: 18,
+    marginTop: 20,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 18,
+    marginTop: 20,
   },
   club: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    width: '100%',
-    marginBottom: 10,
-  },
-  label: {
-    fontWeight: 'bold',
-  },
-  value: {
-    marginBottom: 10,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
+    padding: 15,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    elevation: 3,
+    marginBottom: 15,
+   },
+   label:{
+       fontWeight:'bold' ,
+       marginBottom :5 ,
+   },
+   value:{
+       marginBottom :10 ,
+   },
+   buttonContainer:{
+       flexDirection:'row' ,
+       justifyContent:'space-between' ,
+       marginTop :10 ,
+   },
+   button:{
+       backgroundColor:'#007bff' ,
+       paddingVertical :10 ,
+       paddingHorizontal :15 ,
+       borderRadius :5 ,
+       elevation :2 ,
+       flexGrow :1 ,
+       marginHorizontal :5 ,
+   },
+   deleteButton:{
+       backgroundColor:'#dc3545' ,
+   },
+   buttonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+       fontWeight:'bold' ,
+   },
+   input:{
+       height :40 ,
+       borderColor :'gray' ,
+       borderWidth :1 ,
+       marginBottom :10 ,
+       paddingHorizontal :10 ,
+   },
+   createButton:{
+       backgroundColor:'#28a745' ,
+       paddingVertical :10 ,
+       borderRadius :5 ,
+   },
+   createButtonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+       fontWeight:'bold' ,
+   },
 });
 
-export default Index;
+export default IndexClub;
+

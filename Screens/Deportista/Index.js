@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import Create from './Create'; 
+import Create from './Create';
 import EditarDeportista from './Edit';
 import DetailsDeportista from './Details';
 import DeleteDeportista from './Delete';
 
 import api from '../../services/api';
 
-const Index = ({navigation}) => {
+const Index = ({ navigation }) => {
   const [deportistas, setDeportistas] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdminOrEntrenador, setIsAdminOrEntrenador] = useState(false);
@@ -15,8 +15,6 @@ const Index = ({navigation}) => {
   useEffect(() => {
     // Llamar a la API para obtener datos
     loadDeportistas();
-    loadCategoria();
-    
     checkUserRole(); // Simulando User.IsInRole
   }, []);
 
@@ -24,21 +22,21 @@ const Index = ({navigation}) => {
     try {
       const response = await api.get('/api/Deportista'); // Llamada a la API para obtener deportistas
       const deportistasConDetalles = await Promise.all(response.data.map(async (deportista) => {
-      // Obtener detalles asociados a cada deportista usando sus ids
-      const categoria = await loadCategoria(deportista.idCat);
-      const club = await loadClub(deportista.idClub);
-      const entrenador = await loadEntrenador(deportista.idEnt);
-      const genero = await loadGenero(deportista.idGen);
-      const provincia = await loadProvincia(deportista.idPro);
-              
-      return {
-        ...deportista,
-        idCatNavigation: categoria,
-        idClubNavigation: club,
-        idEntNavigation: entrenador,
-        idGenNavigation: genero,
-        idProNavigation: provincia
-      };
+        // Obtener detalles asociados a cada deportista usando sus ids
+        const categoria = await loadCategoria(deportista.idCat);
+        const club = await loadClub(deportista.idClub);
+        const entrenador = await loadEntrenador(deportista.idEnt);
+        const genero = await loadGenero(deportista.idGen);
+        const provincia = await loadProvincia(deportista.idPro);
+
+        return {
+          ...deportista,
+          idCatNavigation: categoria,
+          idClubNavigation: club,
+          idEntNavigation: entrenador,
+          idGenNavigation: genero,
+          idProNavigation: provincia
+        };
       }));
       setDeportistas(deportistasConDetalles);
     } catch (error) {
@@ -49,47 +47,42 @@ const Index = ({navigation}) => {
   const loadCategoria = async (idCat) => {
     try {
       const response = await api.get(`/api/Categoria/${idCat}`);
-      // Solo devolver el id y nombre de la categoría
       return response.data ? { idCat: response.data.idCat, nombreCat: response.data.nombreCat } : { idCat: null, nombreCat: 'Sin categoría' };
     } catch (error) {
       return { idCat: null, nombreCat: 'Sin categoría' };
     }
   };
-  
+
   const loadClub = async (idClub) => {
     try {
       const response = await api.get(`/api/Club/${idClub}`);
-      // Solo devolver el nombre del club
       return response.data ? { idClub: response.data.idClub, nombreClub: response.data.nombreClub } : { idClub: null, nombreClub: 'Sin club' };
     } catch (error) {
       return { idClub: null, nombreClub: 'Sin club' };
     }
   };
-  
+
   const loadEntrenador = async (idEnt) => {
     try {
       const response = await api.get(`/api/Entrenador/${idEnt}`);
-      // Solo devolver el nombre y apellido del entrenador
       return response.data ? { idEnt: response.data.idEnt, nombreEnt: `${response.data.nombresEnt} ${response.data.apellidosEnt}` } : { idEnt: null, nombreEnt: 'Sin entrenador' };
     } catch (error) {
       return { idEnt: null, nombreEnt: 'Sin entrenador' };
     }
   };
-  
+
   const loadGenero = async (idGen) => {
     try {
       const response = await api.get(`/api/Genero/${idGen}`);
-      // Solo devolver el nombre del género
       return response.data ? { idGen: response.data.idGen, nombreGen: response.data.nombreGen } : { idGen: null, nombreGen: 'Sin género' };
     } catch (error) {
       return { idGen: null, nombreGen: 'Sin género' };
     }
   };
-  
+
   const loadProvincia = async (idPro) => {
     try {
       const response = await api.get(`/api/Provincia/${idPro}`);
-      // Solo devolver el nombre de la provincia
       return response.data ? { idPro: response.data.idPro, nombrePro: response.data.nombrePro } : { idPro: null, nombrePro: 'Sin provincia' };
     } catch (error) {
       return { idPro: null, nombrePro: 'Sin provincia' };
@@ -101,13 +94,30 @@ const Index = ({navigation}) => {
     setIsAdminOrEntrenador(true); // Cambiar según la lógica de autenticación
   };
 
-  const handleSearch = () => {
-    const filtered = deportistas.filter(deportista => 
-      deportista.NombresDep.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      deportista.ApellidosDep.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      deportista.CedulaDep.includes(searchQuery)
-    );
-    setDeportistas(filtered);
+  // Método de búsqueda en tiempo real
+  const handleSearch = (text) => {
+    setSearchQuery(text); // Actualiza el estado de searchQuery
+
+    if (!text.trim()) {
+      loadDeportistas(); // Si el campo está vacío, recarga todos los deportistas
+      return;
+    }
+
+    // Filtrar deportistas según la búsqueda
+    const filtered = deportistas.filter(deportista => {
+      const nombres = deportista.nombresDep ? deportista.nombresDep.toLowerCase() : '';
+      const apellidos = deportista.apellidosDep ? deportista.apellidosDep.toLowerCase() : '';
+      const cedula = deportista.cedulaDep ? deportista.cedulaDep.toLowerCase() : '';
+
+      return (
+        nombres.includes(text.toLowerCase()) ||
+        apellidos.includes(text.toLowerCase()) ||
+        cedula.includes(text)
+      );
+    });
+
+    console.log('Resultados filtrados:', filtered); // Imprime los resultados filtrados
+    setDeportistas(filtered); // Actualiza el estado con los resultados filtrados
   };
 
   const handleCreate = () => {
@@ -115,17 +125,52 @@ const Index = ({navigation}) => {
   };
 
   const handleEdit = (idDep) => {
-    navigation.navigate('EditDeportista', { idDep }); // Redirigir a EditarDeportista con parámetros
+    // Encuentra el deportista por ID
+    const deportista = deportistas.find(d => d.idDep === idDep);
+    
+    // Verifica si se encontró el deportista
+    if (deportista) {
+      console.log('Deportista encontrado:', deportista); // Verifica que se haya encontrado
+      navigation.navigate('EditDeportista', { deportista }); // Pasa el objeto deportista completo
+    } else {
+      console.error('Deportista no encontrado con ID:', idDep);
+    }
   };
 
   const handleDetails = (idDep) => {
-    navigation.navigate('DetailsDeportista', { idDep }); // Redirigir a DetallesDeportista con parámetros
+    const deportista = deportistas.find(d => d.idDep === idDep);
+    if (deportista) {
+      navigation.navigate('DetailsDeportista', { deportista }); // Pasa el objeto deportista completo
+    } else {
+      console.error('Deportista no encontrado con ID:', idDep);
+    }
+  };
+  
+
+  const handleDisable = async (idDep) => {
+    try {
+      const deportista = deportistas.find(d => d.idDep === idDep);
+      if (!deportista) {
+        console.error('Deportista no encontrado con ID:', idDep);
+        return;
+      }
+
+      // Realiza la solicitud para deshabilitar al deportista
+      const response = await api.put(`/api/Deportista/${idDep}`, { activoDep: false });
+      
+      console.log('Deportista deshabilitado:', response.data); // Verifica la respuesta del servidor
+
+      // Actualiza el estado local para reflejar los cambios
+      setDeportistas((prevDeportistas) =>
+        prevDeportistas.map((d) =>
+          d.idDep === idDep ? { ...d, activoDep: false } : d
+        )
+      );
+    } catch (error) {
+      console.error('Error al deshabilitar deportista:', error.response ? error.response.data : error.message);
+    }
   };
 
-  const handleDisable = (idDep) => {
-    // Aquí puedes agregar la lógica para deshabilitar el deportista
-    navigation.navigate('DeleteDeportista', { idDep });
-  };
 
   return (
     <View style={styles.container}>
@@ -138,45 +183,41 @@ const Index = ({navigation}) => {
 
       <TextInput
         value={searchQuery}
-        onChangeText={setSearchQuery}
+        onChangeText={handleSearch} // Llama a handleSearch al cambiar el texto
         placeholder="Buscar ..."
         style={styles.searchInput}
       />
-      <Button title="Buscar" onPress={handleSearch} style={styles.searchButton} />
 
       <FlatList
         data={deportistas}
-        renderItem={({ item }) => {
-          return (
-            <View style={styles.itemContainer}>
-              <Text style={styles.itemText}>Nombres: {item.nombresDep}</Text>
-              <Text style={styles.itemText}>Apellidos: {item.apellidosDep}</Text>
-              <Text style={styles.itemText}>Cédula: {item.cedulaDep}</Text>
+        renderItem={({ item }) => (
+          <View style={styles.itemContainer}>
+            <Text style={styles.itemText}>Nombres: {item.nombresDep}</Text>
+            <Text style={styles.itemText}>Apellidos: {item.apellidosDep}</Text>
+            <Text style={styles.itemText}>Cédula: {item.cedulaDep}</Text>
+            <Text style={styles.itemText}>Categoría: {item.idCatNavigation.nombreCat || 'Sin categoría'}</Text>
+            <Text style={styles.itemText}>Club: {item.idClubNavigation.nombreClub || 'Sin club'}</Text>
+            <Text style={styles.itemText}>Entrenador: {item.idEntNavigation.nombreEnt || 'Sin entrenador'}</Text>
+            <Text style={styles.itemText}>Género: {item.idGenNavigation.nombreGen || 'Sin género'}</Text>
+            <Text style={styles.itemText}>Provincia: {item.idProNavigation.nombrePro || 'Sin provincia'}</Text>
+            <Text style={styles.itemText}>Estado: {item.activoDep ? 'Activo' : 'Inactivo'}</Text>
 
-              <Text style={styles.itemText}>Categoría: {item.idCatNavigation.nombreCat || 'Sin categoría'}</Text>
-              <Text style={styles.itemText}>Club: {item.idClubNavigation.nombreClub || 'Sin club'}</Text>
-              <Text style={styles.itemText}>Entrenador: {item.idEntNavigation.nombreEnt || 'Sin entrenador'}</Text>
-              <Text style={styles.itemText}>Género: {item.idGenNavigation.nombreGen || 'Sin género'}</Text>
-              <Text style={styles.itemText}>Provincia: {item.idProNavigation.nombrePro || 'Sin provincia'}</Text>
-              <Text style={styles.itemText}>Estado: {item.activoDep ? 'Activo' : 'Inactivo'}</Text>
-
-              {isAdminOrEntrenador && (
-                <View style={styles.buttonsContainer}>
-                  <TouchableOpacity onPress={() => handleEdit(item.idDep)} style={[styles.button, styles.editButton]}>
-                    <Text style={styles.buttonText}>Editar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDetails(item.idDep)} style={[styles.button, styles.detailsButton]}>
-                    <Text style={styles.buttonText}>Detalles</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDisable(item.idDep)} style={[styles.button, styles.disableButton]}>
-                    <Text style={styles.buttonText}>Deshabilitar</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          );
-        }}
-        keyExtractor={item => item.IdDep ? item.IdDep.toString() : String(item.id || Math.random())}
+            {isAdminOrEntrenador && (
+              <View style={styles.buttonsContainer}>
+                <TouchableOpacity onPress={() => handleEdit(item.idDep)} style={[styles.button, styles.editButton]}>
+                  <Text style={styles.buttonText}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDetails(item.idDep)} style={[styles.button, styles.detailsButton]}>
+                  <Text style={styles.buttonText}>Detalles</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDisable(item.idDep)} style={[styles.button, styles.disableButton]}>
+                  <Text style={styles.buttonText}>Deshabilitar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+        keyExtractor={(item) => item.IdDep ? item.IdDep.toString() : String(item.id || Math.random())}
       />
     </View>
   );
@@ -200,9 +241,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     borderRadius: 5,
   },
-  searchButton: {
-    marginTop: 10,
-  },
   itemContainer: {
     backgroundColor: '#f9f9f9',
     padding: 10,
@@ -225,24 +263,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 5,
     alignItems: 'center',
-    flex: 1,
-  },
-  editButton: {
-    backgroundColor: '#4CAF50',
-    marginRight: 5,
-  },
-  detailsButton: {
-    backgroundColor: '#2196F3',
-    marginHorizontal: 5,
-  },
-  disableButton: {
-    backgroundColor: '#f44336',
-    marginLeft: 5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
+    flexGrow:1,
+   },
+   editButton:{
+     backgroundColor:'#4CAF50',
+     marginRight :5 ,
+   },
+   detailsButton:{
+     backgroundColor:'#2196F3',
+     marginHorizontal :5 ,
+   },
+   disableButton:{
+     backgroundColor:'#f44336',
+     marginLeft :5 ,
+   },
+   buttonText:{
+     color:'#fff',
+     fontSize :16 ,
+   },
 });
 
 export default Index;

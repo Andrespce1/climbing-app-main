@@ -1,14 +1,17 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import useAppStorageHook from "./../../storage/appStorage";
 
 const Bienvenida = ({ navigation }) => {
+  const { appUser, unsetAppUser, setAppUser } = useAppStorageHook();
   return (
     <View style={styles.container}>
       <Image
         source={{ uri: 'https://via.placeholder.com/150' }} // Reemplaza esta URL con tu logo o imagen de bienvenida
         style={styles.logo}
       />
-      <Text style={styles.title}>¡Bienvenido a Nuestra App!</Text>
+      <Text style={styles.title}>¡Bienvenido a Nuestra App! {appUser.nombreUsu}</Text>
+      <Text style={styles.subtitle}>{appUser.rolesUsu}</Text>
       <Text style={styles.subtitle}>
         Explora las funciones de la aplicación y gestiona todo fácilmente.
       </Text>

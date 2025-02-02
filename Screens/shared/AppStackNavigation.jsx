@@ -4,14 +4,17 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import ClubStackNavigation from './ClubStackNavigation';
 import SedeStackNavigation from './SedeStackNavigation';
 import DeportistaStackNavigation from './DeportistaStackNavigation';
-import CompetenciaStackNavigation from './CompentenciaStackNavigation';
+import CompetenciaStackNavigation from './CompetenciaStackNavigation';
 import BienvenidaStackNavigation from '../Home/Bienvenida';
+import JuezStackNavigation from './JuezStackNavigation';
+import EntrenadorStackNavigation from './EntrenadorStackNavigation';
 
 const Drawer = createDrawerNavigator();
 
 const CustomDrawerContent = ({ navigation }) => {
   const [isInfraExpanded, setIsInfraExpanded] = useState(false);
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
+  const [isCompetenciasExpanded, setIsCompetenciasExpanded] = useState(false);
 
   return (
     <View style={{ flex: 1 }}>
@@ -19,7 +22,6 @@ const CustomDrawerContent = ({ navigation }) => {
       <TouchableOpacity onPress={() => navigation.navigate('Home')}>
         <Text style={styles.drawerItem}>Inicio</Text>
       </TouchableOpacity>
-
 
       {/* Gestión de Participantes */}
       <TouchableOpacity
@@ -61,13 +63,31 @@ const CustomDrawerContent = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.navigate('Sedes')}>
             <Text style={styles.subItem}>Sedes</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Competencias')}>
+            <Text style={styles.subItem}>Competencias</Text>
+          </TouchableOpacity>
         </View>
       )}
 
       {/* Gestión de Competencias */}
-      <TouchableOpacity onPress={() => navigation.navigate('Competencias')}>
+      <TouchableOpacity
+        onPress={() => setIsCompetenciasExpanded(!isCompetenciasExpanded)}
+        style={styles.collapsibleHeader}
+      >
         <Text style={styles.drawerItem}>Gestión de Competencias</Text>
       </TouchableOpacity>
+
+      {/* Opciones del menú colapsable para Competencias */}
+      {isCompetenciasExpanded && (
+        <View>
+          <TouchableOpacity onPress={() => navigation.navigate('CompetenciaAgregarDeportistas')}>
+            <Text style={styles.subItem}>Agregar Deportistas</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('CompetenciaAgregarResultados')}>
+            <Text style={styles.subItem}>Agregar Resultados</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -81,12 +101,12 @@ const AppStackNavigation = () => {
       }}
     >
       <Drawer.Screen name="Home" component={BienvenidaStackNavigation} />
-      <Drawer.Screen name="Clubes" component={ClubStackNavigation} />
-      <Drawer.Screen name="Sedes" component={SedeStackNavigation} />
+      <Drawer.Screen name="Clubes" component={ClubStackNavigation} options={{ drawerLabel: () => null }} />
+      <Drawer.Screen name="Sedes" component={SedeStackNavigation} options={{ drawerLabel: () => null }} />
       <Drawer.Screen name="Deportista" component={DeportistaStackNavigation} options={{ drawerLabel: () => null }} />
-      <Drawer.Screen name="Juez" component={DeportistaStackNavigation} options={{ drawerLabel: () => null }} />
-      <Drawer.Screen name="Entrenador" component={DeportistaStackNavigation} options={{ drawerLabel: () => null }} />
-      <Drawer.Screen name="Competencias" component={CompetenciaStackNavigation} />
+      <Drawer.Screen name="Juez" component={JuezStackNavigation} options={{ drawerLabel: () => null }} />
+      <Drawer.Screen name="Entrenador" component={EntrenadorStackNavigation} options={{ drawerLabel: () => null }} />
+      <Drawer.Screen name="Competencias" component={CompetenciaStackNavigation} options={{ drawerLabel: () => null }} />
     </Drawer.Navigator>
   );
 };

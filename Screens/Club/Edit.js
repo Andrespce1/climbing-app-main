@@ -1,78 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { NavigationContainer, useNavigation, useRoute } from '@react-navigation/native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native'; // Importa useNavigation y useRoute
+import api from '../../services/api'; // Asegúrate de importar tu API
 
-const Edit = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const [club, setClub] = useState({
-    id: route.params.idClub,
-    nombre: '',
-  });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+const EditClub = () => {
+  const navigation = useNavigation(); // Inicializa la navegación
+  const route = useRoute(); // Obtiene los parámetros de la ruta
+  const club = route.params.club; // Obtener el objeto club pasado como parámetro
 
-  useEffect(() => {
-    // Simulación de carga de datos (reemplaza con tu lógica de API)
-    const clubData = {
-      id: route.params.idClub,
-      nombre: 'Club Ejemplo', // Carga el nombre del club desde tu API
-    };
-    setClub(clubData);
-    setLoading(false);
-  }, []);
+  // Inicializar los estados
+  const [nombreClub, setNombreClub] = useState(club.nombreClub || ''); // Inicializa con el nombre del club
 
-  const handleGuardar = () => {
-    if (club.nombre === '') {
-      setError('Ingrese un nombre para el club');
-    } else {
-      // Lógica para guardar el club (p. ej., API call)
-      console.log('Guardar club:', club);
-      // Navegar a otra pantalla después de guardar (opcional)
-      // navigation.navigate('Clubs');
-      setError(null); // Limpiar error después de guardar exitoso
+  const guardarClub = async () => {
+    if (!nombreClub) {
+      Alert.alert('Error', 'Por favor completa todos los campos.');
+      return;
+    }
+
+    try {
+      const response = await api.put(`/api/Club/${club.idClub}`, { // Asegúrate de usar el ID correcto
+        nombreClub,
+      });
+      console.log('Club actualizado:', response.data);
+      Alert.alert('Éxito', 'Club actualizado con éxito');
+      navigation.navigate('Index'); // Regresar a la lista de clubes
+    } catch (error) {
+      console.error('Error guardando club:', error);
+      Alert.alert('Error', 'No se pudo actualizar el club');
     }
   };
 
-  const handleRegresar = () => {
-    navigation.goBack(); // Regresar a la pantalla anterior
-  };
-
-  if (loading) {
-    return <Text>Cargando...</Text>;
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>EDITAR</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.titulo}>EDITAR CLUB</Text>
       <View style={styles.formContainer}>
-        <Text style={styles.formTitulo}>Club</Text>
-        <View style={styles.hr} />
+        <Text style={styles.label}>Nombre del Club:</Text>
         <TextInput
           style={styles.input}
-          placeholder="Nombre del Club"
-          value={club.nombre}
-          onChangeText={(text) => setClub({ ...club, nombre: text })}
+          value={nombreClub}
+          onChangeText={setNombreClub}
+          placeholder="Ingrese el nombre del club"
         />
-        {error && <Text style={styles.error}>{error}</Text>}
-        <View style={styles.botonesContainer}>
-          <TouchableOpacity style={styles.botonGuardar} onPress={handleGuardar}>
-            <Text style={styles.botonTexto}>Guardar</Text>
+        
+        {/* Botones para guardar y regresar */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity onPress={guardarClub} style={[styles.button, styles.saveButton]}>
+            <Text style={styles.buttonText}>Guardar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.botonRegresar} onPress={handleRegresar}>
-            <Text style={styles.botonTexto}>Regresar</Text>
+
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()} 
+            style={[styles.button, styles.cancelButton]}>
+            <Text style={styles.buttonText}>Regresar</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#fff',
     padding: 20,
   },
   titulo: {
@@ -81,51 +71,43 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   formContainer: {
-    width: '100%',
+    marginBottom: 20,
   },
-  formTitulo: {
-    fontSize: 18,
-    marginBottom: 10,
-  },
-  hr: {
-    width: '100%',
-    height: 1,
-    backgroundColor: '#ccc',
-    marginBottom: 10,
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
   input: {
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
     paddingHorizontal: 10,
-    marginBottom: 10,
+    marginBottom: 20,
   },
-  error: {
-    color: 'red',
-    marginBottom: 10,
-  },
-  botonesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
-  },
-  botonGuardar: {
-    backgroundColor: '#007bff',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
-  },
-  botonRegresar: {
-    backgroundColor: '#dc3545',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
-  },
-  botonTexto: {
-    color: '#fff',
-    fontSize: 16,
-  },
+  buttonContainer:{
+    flexDirection:'row',
+    justifyContent:'space-between',
+    marginTop :10 ,
+   },
+   button:{
+       paddingVertical :10 ,
+       paddingHorizontal :15 ,
+       borderRadius :5 ,
+       elevation :2 ,
+       width:'45%',
+   },
+   saveButton:{
+       backgroundColor:'#007bff' ,
+   },
+   cancelButton:{
+       backgroundColor:'#dc3545' ,
+   },
+   buttonText:{
+       color:'#fff' ,
+       textAlign:'center' , 
+       fontWeight:'bold' ,
+   }
 });
 
-export default Edit;
+export default EditClub;

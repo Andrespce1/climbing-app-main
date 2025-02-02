@@ -92,16 +92,6 @@ const VistaPDFListaResultadosFinal = () => {
           </View>
           {detalleCompetencium.map((registro, index) => (
             <View key={index} style={[styles.tableRow, cont === 1 ? styles.firstRow : null]}>
-              <Text style={styles.tableCell}>
-                {cont === 1 ? (
-                  <Image
-                    source={require('./medalla-oro.png')} // Reemplaza con la imagen de la medalla de oro
-                    style={styles.medal}
-                  />
-                ) : (
-                  cont
-                )}
-              </Text>
               <Text style={styles.tableCell}>{registro.Puesto || 'No clasifica'}</Text>
               <Text style={styles.tableCell}>{registro.Deportista}</Text>
               <Text style={styles.tableCell}>{registro.ResultadoClasificacion}</Text>

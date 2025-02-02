@@ -1,210 +1,219 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, TextInput, FlatList, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
+import api from '../../services/api'; // Asegúrate de importar tu instancia de API
 
-const Index = () => {
+const IndexCompetencia = () => {
+  const navigation = useNavigation(); // Inicializa useNavigation
   const [competencias, setCompetencias] = useState([]);
-  const [searchFor, setSearchFor] = useState('');
-  const navigation = useNavigation();
-
-  const listaCategorias = []; // Asumir que estos datos se obtienen desde una API o fuente de datos
-  const listaGeneros = [];
-  const listaJueces = [];
-  const listaModalidades = [];
-  const listaSedes = [];
-
-  const getCategoriaNombre = (idCat) => {
-    const categoria = listaCategorias.find((categoria) => categoria.IdCat === idCat);
-    return categoria ? categoria.NombreCat : 'No encontrado';
-  };
-
-  const getGeneroNombre = (idGen) => {
-    const genero = listaGeneros.find((genero) => genero.IdGen === idGen);
-    return genero ? genero.NombreGen : 'No encontrado';
-  };
-
-  const getJuezNombre = (idJuez) => {
-    const juez = listaJueces.find((juez) => juez.IdJuez === idJuez);
-    return juez ? `${juez.NombresJuez} ${juez.ApellidosJuez}` : 'No encontrado';
-  };
-
-  const getModalidadNombre = (idMod) => {
-    const modalidad = listaModalidades.find((modalidad) => modalidad.IdMod === idMod);
-    return modalidad ? modalidad.DescripcionMod : 'No encontrado';
-  };
-
-  const getSedeNombre = (idSede) => {
-    const sede = listaSedes.find((sede) => sede.IdSede === idSede);
-    return sede ? sede.NombreSede : 'No encontrado';
-  };
-
-  const getEstado = (activo) => (activo ? 'ACTIVO' : 'INACTIVO');
-
-  const handleBuscar = () => {
-    // Lógica para buscar competencias (API call, etc.)
-    console.log('Buscar Pressed');
-  };
-
-  const handleEditar = (idCom) => {
-    navigation.navigate('EditarCompetencia', { id: idCom });
-  };
-
-  const handleDetalles = (idCom) => {
-    navigation.navigate('DetallesCompetencia', { id: idCom });
-  };
-
-  const handleDeshabilitar = (idCom) => {
-    // Lógica para deshabilitar la competencia (API call, etc.)
-    console.log('Deshabilitar Pressed');
-  };
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Lógica para obtener el listado de competencias (API call, etc.)
-    setCompetencias([
-      // Ejemplo de datos
-      { IdCom: 1, NombreCom: 'Competencia 1', FechaInicioCom: '2023-01-01', FechaFinCom: '2023-01-31', IdCat: 1, IdGen: 1, IdJuez: 1, IdMod: 1, IdSede: 1, ActivoCom: true },
-      { IdCom: 2, NombreCom: 'Competencia 2', FechaInicioCom: '2023-02-01', FechaFinCom: '2023-02-28', IdCat: 2, IdGen: 2, IdJuez: 2, IdMod: 2, IdSede: 2, ActivoCom: false },
-    ]);
+    const fetchCompetencias = async () => {
+      try {
+        const response = await api.get('/api/Competencia'); // Cambia según tu API
+        console.log('Respuesta de la API:', response.data); // Imprime la respuesta
+        setCompetencias(response.data);        
+      } catch (err) {
+        console.error(err);
+        setError('Error al cargar las competencias');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompetencias();
   }, []);
 
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.titulo}>LISTADO DE COMPETENCIAS</Text>
-      <View style={styles.buscarContainer}>
-        <TextInput style={styles.inputBuscar} value={searchFor} onChangeText={(text) => setSearchFor(text)} placeholder="Buscar ..." />
-        <TouchableOpacity style={styles.botonBuscar} onPress={handleBuscar}>
-          <Text style={styles.textoBotonBuscar}>Buscar</Text>
+  const handleSearch = () => {
+    const filtered = competencias.filter(competencia =>
+      competencia.nombreCom.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setCompetencias(filtered);
+  };
+
+  const handleCreateCompetencia = () => {
+    navigation.navigate('CrearCompetencia'); // Navega a la pantalla de creación
+  };
+
+  const handleEditCompetencia = (id) => {
+    navigation.navigate('EditarCompetencia', { idCom: id }); // Navega a la pantalla de edición
+  };
+
+  const handleDetailsCompetencia = (id) => {
+    navigation.navigate('DetallesCompetencia', { idCom: id }); // Navega a la pantalla de detalles
+  };
+
+  const handleDeleteCompetencia = async (id) => {
+    try {
+      await api.delete(`/api/Competencia/${id}`);
+      setCompetencias(competencias.filter(competencia => competencia.IdCom !== id));
+      Alert.alert('Éxito', 'Competencia eliminada con éxito');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'No se pudo eliminar la competencia');
+    }
+  };
+
+  if (loading) {
+    return <Text style={styles.loadingText}>Cargando...</Text>;
+  }
+
+  if (error) {
+    return <Text style={styles.errorText}>{error}</Text>;
+  }
+
+  if (!competencias || competencias.length === 0) {
+    return <Text style={styles.emptyText}>No hay competencias disponibles.</Text>;
+  }
+
+  const renderItem = ({ item }) => (
+    <View style={styles.competencia}>
+      <Text style={styles.label}>Nombre de la Competencia:</Text>
+      <Text style={styles.value}>{item.nombreCom}</Text>
+      
+      {/* Botones para Editar y Eliminar */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={() => handleEditCompetencia(item.idCom)}>
+          <Text style={styles.buttonText}>Editar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handleDetailsCompetencia(item.idCom)}>
+          <Text style={styles.buttonText}>Detalles</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={() => handleDeleteCompetencia(item.idCom)}>
+          <Text style={styles.buttonText}>Eliminar</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.tablaContainer}>
-        <View style={styles.tablaHeader}>
-          <Text style={styles.tablaHeaderItem}>Nombre</Text>
-          <Text style={styles.tablaHeaderItem}>Fecha de Inicio</Text>
-          <Text style={styles.tablaHeaderItem}>Fecha de Finalización</Text>
-          <Text style={styles.tablaHeaderItem}>Categoría</Text>
-          <Text style={styles.tablaHeaderItem}>Género</Text>
-          <Text style={styles.tablaHeaderItem}>Juez</Text>
-          <Text style={styles.tablaHeaderItem}>Modalidad</Text>
-          <Text style={styles.tablaHeaderItem}>Sede</Text>
-          <Text style={styles.tablaHeaderItem}>Estado</Text>
-          <Text style={styles.tablaHeaderItem} />
-        </View>
-        {competencias.map((competencia, index) => (
-          <View key={index} style={styles.tablaRow}>
-            <Text style={styles.tablaItem}>{competencia.NombreCom}</Text>
-            <Text style={styles.tablaItem}>{competencia.FechaInicioCom}</Text>
-            <Text style={styles.tablaItem}>{competencia.FechaFinCom}</Text>
-            <Text style={styles.tablaItem}>{getCategoriaNombre(competencia.IdCat)}</Text>
-            <Text style={styles.tablaItem}>{getGeneroNombre(competencia.IdGen)}</Text>
-            <Text style={styles.tablaItem}>{getJuezNombre(competencia.IdJuez)}</Text>
-            <Text style={styles.tablaItem}>{getModalidadNombre(competencia.IdMod)}</Text>
-            <Text style={styles.tablaItem}>{getSedeNombre(competencia.IdSede)}</Text>
-            <Text style={styles.tablaItem}>{getEstado(competencia.ActivoCom)}</Text>
-            <View style={styles.botonesContainer}>
-              <TouchableOpacity style={styles.botonEditar} onPress={() => handleEditar(competencia.IdCom)}>
-                <Text style={styles.textoBotonEditar}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.botonDetalles} onPress={() => handleDetalles(competencia.IdCom)}>
-                <Text style={styles.textoBotonDetalles}>Detalles</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.botonDeshabilitar} onPress={() => handleDeshabilitar(competencia.IdCom)}>
-                <Text style={styles.textoBotonDeshabilitar}>Deshabilitar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>LISTADO DE COMPETENCIAS</Text>
+      
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Buscar competencias..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+          <Text style={styles.searchButtonText}>Buscar</Text>
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+
+      <FlatList
+        data={competencias}
+        keyExtractor={(item) => item.idCom.toString()}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 20 }} // Añadir espacio en la parte inferior
+      />
+      
+      <TouchableOpacity style={styles.createButton} onPress={handleCreateCompetencia}>
+        <Text style={styles.createButtonText}>Crear Competencia</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  titulo: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-  },
-  buscarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  inputBuscar: {
-    fontSize: 16,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    width: '80%',
-  },
-  botonBuscar: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 5,
-  },
-  textoBotonBuscar: {
-    fontSize: 16,
-    color: '#fff',
-  },
-  tablaContainer: {
-    marginBottom: 20,
-  },
-  tablaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#f0f0f0',
-    padding: 5,
-  },
-  tablaHeaderItem: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  tablaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  tablaItem: {
-    fontSize: 16,
-  },
-  botonesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  botonEditar: {
-    backgroundColor: '#ffc107',
-    padding: 5,
-    borderRadius: 5,
-  },
-  textoBotonEditar: {
-    fontSize: 14,
-    color: '#fff',
-  },
-  botonDetalles: {
-    backgroundColor: '#17a2b8',
-    padding: 5,
-    borderRadius: 5,
-  },
-  textoBotonDetalles: {
-    fontSize: 14,
-    color: '#fff',
-  },
-  botonDeshabilitar: {
-    backgroundColor: '#dc3545',
-    padding: 5,
-    borderRadius: 5,
-  },
-  textoBotonDeshabilitar: {
-    fontSize: 14,
-    color: '#fff',
-  },
+   },
+   loadingText: {
+       textAlign: 'center',
+       fontSize: 18,
+       marginTop: 20,
+   },
+   errorText: {
+       textAlign: 'center',
+       color: 'red',
+       fontSize: 18,
+       marginTop: 20,
+   },
+   emptyText: {
+       textAlign: 'center',
+       fontSize: 18,
+       marginTop: 20,
+   },
+   competencia:{
+       padding :15 ,
+       backgroundColor:'#ffffff' ,
+       borderRadius :10 ,
+       elevation :3 ,
+       marginBottom :15 ,
+   },
+   label:{
+       fontWeight:'bold' ,
+       marginBottom :5 ,
+   },
+   value:{
+       marginBottom :10 ,
+   },
+   buttonContainer:{
+       flexDirection:'row' ,
+       justifyContent:'space-between' ,
+       marginTop :10 ,
+   },
+   button:{
+       backgroundColor:'#007bff' ,
+       paddingVertical :10 ,
+       paddingHorizontal :15 ,
+       borderRadius :5 ,
+       elevation :2 ,
+       flexGrow :1 ,
+       marginHorizontal :5 ,
+   },
+   deleteButton:{
+       backgroundColor:'#dc3545' ,
+   },
+   buttonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+       fontWeight:'bold' ,
+   },
+   input:{
+       height :40 ,
+       borderColor :'gray' ,
+       borderWidth :1 ,
+       marginBottom :10 ,
+       paddingHorizontal :10 ,
+   },
+   searchContainer:{
+       flexDirection:'row',
+       justifyContent:'space-between',
+       marginBottom:10,
+   },
+   searchButton:{
+       backgroundColor:'#28a745',
+       paddingVertical:10,
+       paddingHorizontal:15,
+       borderRadius:5,
+   },
+   searchButtonText:{
+       color:'#fff',
+       fontWeight:'bold',
+   },
+   createButton:{
+       backgroundColor:'#007bff' ,
+       paddingVertical :10 ,
+       borderRadius :5 ,
+   },
+   createButtonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+       fontWeight:'bold' ,
+   },
 });
 
-export default Index;
+export default IndexCompetencia;

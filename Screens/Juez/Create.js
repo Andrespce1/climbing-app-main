@@ -1,77 +1,87 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Picker } from 'react-native';
-import { Button } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker'; // Importa Picker desde el nuevo paquete
+import api from '../../services/api'; // Asegúrate de importar tu instancia de API
 
-const Create = () => {
-  const [nombresJuez, setNombresJuez] = useState('');
-  const [apellidosJuez, setApellidosJuez] = useState('');
-  const [cedulaJuez, setCedulaJuez] = useState('');
-  const [principalJuez, setPrincipalJuez] = useState('');
-  const [listaEstados, setListaEstados] = useState([
-    { id: 1, nombre: 'Sí' },
-    { id: 2, nombre: 'No' },
-  ]);
+const CreateEntrenador = () => {
+  const [nombresEnt, setNombresEnt] = useState('');
+  const [apellidosEnt, setApellidosEnt] = useState('');
+  const [cedulaEnt, setCedulaEnt] = useState('');
   const [idPro, setIdPro] = useState('');
-  const [listaProvincias, setListaProvincias] = useState([
-    { id: 1, nombre: 'Provincia 1' },
-    { id: 2, nombre: 'Provincia 2' },
-  ]);
-  const [activoJuez, setActivoJuez] = useState('');
-  const [listaEstados2, setListaEstados2] = useState([
-    { id: 1, nombre: 'Activo' },
-    { id: 2, nombre: 'Inactivo' },
-  ]);
+  const [listaProvincias, setListaProvincias] = useState([]);
+  const [estadoEnt, setEstadoEnt] = useState(true); // Por defecto habilitado (true)
 
-  const Create = () => {
-    // Aquí debes implementar la lógica para crear un nuevo juez
-    // Puedes utilizar fetch o Axios para enviar los datos al servidor
-    console.log('Crear juez:', {
-      nombresJuez,
-      apellidosJuez,
-      cedulaJuez,
-      principalJuez,
-      idPro,
-      activoJuez,
-    });
+  useEffect(() => {
+    loadOptions();
+  }, []);
+
+  const loadOptions = async () => {
+    try {
+      // Cargar provincias
+      const provinciasResponse = await api.get('/api/Provincia');
+      console.log('Datos de provincias:', provinciasResponse.data);
+      setListaProvincias(provinciasResponse.data);
+      
+    } catch (error) {
+      console.error('Error cargando opciones:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', 'No se pudieron cargar las opciones');
+    }
+  };
+
+  const createEntrenador = async () => {
+    if (!nombresEnt || !apellidosEnt || !cedulaEnt || !idPro) {
+      Alert.alert('Error', 'Por favor completa todos los campos.');
+      return;
+    }
+
+    try {
+      const response = await api.post('/api/Entrenador', {
+        NombresEnt: nombresEnt,
+        ApellidosEnt: apellidosEnt,
+        CedulaEnt: cedulaEnt,
+        IdPro: idPro,
+        ActivoEnt: estadoEnt, // Se pasa como booleano
+      });
+      console.log('Entrenador creado:', response.data);
+      Alert.alert('Éxito', 'Entrenador creado con éxito');
+      // Limpiar el formulario después de crear
+      setNombresEnt('');
+      setApellidosEnt('');
+      setCedulaEnt('');
+      setIdPro('');
+      setEstadoEnt(true); // Reiniciar a habilitado por defecto
+    } catch (error) {
+      console.error('Error creando entrenador:', error);
+      Alert.alert('Error', 'No se pudo crear el entrenador');
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>CREAR JUEZ</Text>
+      <Text style={styles.title}>CREAR ENTRENADOR</Text>
       <View style={styles.formContainer}>
         <Text style={styles.label}>Nombres:</Text>
         <TextInput
           style={styles.input}
-          value={nombresJuez}
-          onChangeText={(text) => setNombresJuez(text)}
-          placeholder="Ingrese los nombres del juez"
+          value={nombresEnt}
+          onChangeText={setNombresEnt}
+          placeholder="Ingrese los nombres del entrenador"
         />
         <Text style={styles.label}>Apellidos:</Text>
         <TextInput
           style={styles.input}
-          value={apellidosJuez}
-          onChangeText={(text) => setApellidosJuez(text)}
-          placeholder="Ingrese los apellidos del juez"
+          value={apellidosEnt}
+          onChangeText={setApellidosEnt}
+          placeholder="Ingrese los apellidos del entrenador"
         />
         <Text style={styles.label}>Cédula:</Text>
         <TextInput
           style={styles.input}
-          value={cedulaJuez}
-          onChangeText={(text) => setCedulaJuez(text)}
-          placeholder="Ingrese la cédula del juez"
+          value={cedulaEnt}
+          onChangeText={setCedulaEnt}
+          placeholder="Ingrese la cédula del entrenador"
           keyboardType="numeric"
         />
-        <Text style={styles.label}>¿Es juez Principal?</Text>
-        <Picker
-          selectedValue={principalJuez}
-          style={styles.picker}
-          onValueChange={(itemValue) => setPrincipalJuez(itemValue)}
-        >
-          <Picker.Item label="--Elija la opción--" value="" />
-          {listaEstados.map((estado) => (
-            <Picker.Item label={estado.nombre} value={estado.id} key={estado.id} />
-          ))}
-        </Picker>
         <Text style={styles.label}>Provincia:</Text>
         <Picker
           selectedValue={idPro}
@@ -83,24 +93,29 @@ const Create = () => {
             <Picker.Item label={provincia.nombre} value={provincia.id} key={provincia.id} />
           ))}
         </Picker>
+
+        {/* Selección de Estado */}
         <Text style={styles.label}>Estado:</Text>
         <Picker
-          selectedValue={activoJuez}
+          selectedValue={estadoEnt ? '1' : '0'} // Mapeo del booleano a string para el Picker
           style={styles.picker}
-          onValueChange={(itemValue) => setActivoJuez(itemValue)}
+          onValueChange={(itemValue) => setEstadoEnt(itemValue === '1')}
         >
-          <Picker.Item label="--Elija un Estado--" value="" />
-          {listaEstados2.map((estado) => (
-            <Picker.Item label={estado.nombre} value={estado.id} key={estado.id} />
-          ))}
+          <Picker.Item label="Habilitado" value="1" />
+          <Picker.Item label="Deshabilitado" value="0" />
         </Picker>
+
+        {/* Botones para guardar y regresar */}
         <View style={styles.buttonContainer}>
-          <Button mode="contained" onPress={Create}>
-            Crear
-          </Button>
-          <Button mode="outlined" onPress={() => console.log('Regresar')}>
-            Regresar
-          </Button>
+          <TouchableOpacity onPress={createEntrenador} style={[styles.button, styles.createButton]}>
+            <Text style={styles.buttonText}>Crear</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={() => console.log('Regresar')} 
+            style={[styles.button, styles.cancelButton]}>
+            <Text style={styles.buttonText}>Regresar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -123,8 +138,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
     marginBottom: 10,
   },
   input: {
@@ -137,12 +151,31 @@ const styles = StyleSheet.create({
   picker: {
     width: '100%',
     marginBottom: 20,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
+   },
+   buttonContainer:{
+       flexDirection:'row',
+       justifyContent:'space-between',
+       marginTop :10 ,
+   },
+   button:{
+       paddingVertical :10 ,
+       paddingHorizontal :15 ,
+       borderRadius :5 ,
+       elevation :2 ,
+       width:'45%',
+   },
+   createButton:{
+       backgroundColor:'#007bff' ,
+   },
+   cancelButton:{
+       backgroundColor:'#dc3545' ,
+   },
+   buttonText:{
+       color:'#fff' ,
+       textAlign:'center' , 
+       fontWeight:'bold' ,
+   }
 });
 
-export default Create;
+export default CreateEntrenador;
+

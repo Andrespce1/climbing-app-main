@@ -1,40 +1,56 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Picker } from 'react-native';
-import { Button } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker'; // Importa Picker desde el nuevo paquete
+import api from '../../services/api'; // Asegúrate de importar tu instancia de API
+import { useNavigation, useRoute } from '@react-navigation/native'; // Importa useNavigation y useRoute
 
-const Edit = ({ navigation, route }) => {
-  const entrenador = route.params.entrenador;
+const EditEntrenador = () => {
+  const navigation = useNavigation(); // Inicializa la navegación
+  const route = useRoute(); // Obtiene los parámetros de la ruta
+  const entrenador = route.params.entrenador; // Obtener el objeto entrenador pasado como parámetro
+
+  // Inicializa el estado con los datos del entrenador
   const [nombresEnt, setNombresEnt] = useState(entrenador.NombresEnt);
   const [apellidosEnt, setApellidosEnt] = useState(entrenador.ApellidosEnt);
   const [cedulaEnt, setCedulaEnt] = useState(entrenador.CedulaEnt);
   const [idPro, setIdPro] = useState(entrenador.IdPro);
-  const [listaProvincias, setListaProvincias] = useState([
-    { id: 1, nombre: 'Provincia 1' },
-    { id: 2, nombre: 'Provincia 2' },
-  ]);
   const [idUsu, setIdUsu] = useState(entrenador.IdUsu);
-  const [listaUsuarios, setListaUsuarios] = useState([
-    { id: 1, nombre: 'Usuario 1' },
-    { id: 2, nombre: 'Usuario 2' },
-  ]);
-  const [activoEnt, setActivoEnt] = useState(entrenador.ActivoEnt);
-  const [listaEstados, setListaEstados] = useState([
-    { id: 1, nombre: 'Activo' },
-    { id: 2, nombre: 'Inactivo' },
-  ]);
+  const [listaProvincias, setListaProvincias] = useState([]);
 
-  const guardarEntrenador = () => {
-    // Aquí debes implementar la lógica para guardar los cambios del entrenador en el servidor
-    // Puedes utilizar fetch o Axios para enviar los datos al servidor
-    console.log('Guardar entrenador:', {
-      nombresEnt,
-      apellidosEnt,
-      cedulaEnt,
-      idPro,
-      idUsu,
-      activoEnt,
-    });
-    navigation.navigate('Index');
+  useEffect(() => {
+    loadOptions();
+  }, []);
+
+  const loadOptions = async () => {
+    try {
+      // Cargar provincias
+      const provinciasResponse = await api.get('/api/Provincia');
+      console.log('Datos de provincias:', provinciasResponse.data);
+      setListaProvincias(provinciasResponse.data);
+      
+    } catch (error) {
+      console.error('Error cargando opciones:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', 'No se pudieron cargar las opciones');
+    }
+  };
+
+  const guardarEntrenador = async () => {
+    try {
+      const response = await api.put(`/api/Entrenador/${entrenador.id}`, { // Asegúrate de usar el ID correcto
+        NombresEnt: nombresEnt,
+        ApellidosEnt: apellidosEnt,
+        CedulaEnt: cedulaEnt,
+        IdPro: idPro,
+        IdUsu: idUsu,
+        ActivoEnt: entrenador.ActivoEnt, // Mantener el estado actual
+      });
+      console.log('Entrenador actualizado:', response.data);
+      Alert.alert('Éxito', 'Entrenador actualizado con éxito');
+      navigation.navigate('Index'); // Regresar a la lista de entrenadores
+    } catch (error) {
+      console.error('Error guardando entrenador:', error);
+      Alert.alert('Error', 'No se pudo actualizar el entrenador');
+    }
   };
 
   return (
@@ -45,21 +61,21 @@ const Edit = ({ navigation, route }) => {
         <TextInput
           style={styles.input}
           value={nombresEnt}
-          onChangeText={(text) => setNombresEnt(text)}
+          onChangeText={setNombresEnt}
           placeholder="Ingrese los nombres del entrenador"
         />
         <Text style={styles.label}>Apellidos:</Text>
         <TextInput
           style={styles.input}
           value={apellidosEnt}
-          onChangeText={(text) => setApellidosEnt(text)}
+          onChangeText={setApellidosEnt}
           placeholder="Ingrese los apellidos del entrenador"
         />
         <Text style={styles.label}>Cédula:</Text>
         <TextInput
           style={styles.input}
           value={cedulaEnt}
-          onChangeText={(text) => setCedulaEnt(text)}
+          onChangeText={setCedulaEnt}
           placeholder="Ingrese la cédula del entrenador"
           keyboardType="numeric"
         />
@@ -71,38 +87,21 @@ const Edit = ({ navigation, route }) => {
         >
           <Picker.Item label="--Elija la Provincia--" value="" />
           {listaProvincias.map((provincia) => (
-            <Picker.Item label={provincia.nombre} value={provincia.id} key={provincia.id} />
+            <Picker.Item label={provincia.nombrePro} value={provincia.idPro} key={provincia.idPro} />
           ))}
         </Picker>
-        <Text style={styles.label}>Usuario:</Text>
-        <Picker
-          selectedValue={idUsu}
-          style={styles.picker}
-          onValueChange={(itemValue) => setIdUsu(itemValue)}
-        >
-          <Picker.Item label="--Elija un Usuario--" value="" />
-          {listaUsuarios.map((usuario) => (
-            <Picker.Item label={usuario.nombre} value={usuario.id} key={usuario.id} />
-          ))}
-        </Picker>
-        <Text style={styles.label}>Estado:</Text>
-        <Picker
-          selectedValue={activoEnt}
-          style={styles.picker}
-          onValueChange={(itemValue) => setActivoEnt(itemValue)}
-        >
-          <Picker.Item label="--Elija un Estado--" value="" />
-          {listaEstados.map((estado) => (
-            <Picker.Item label={estado.nombre} value={estado.id} key={estado.id} />
-          ))}
-        </Picker>
+
+        {/* Botones para guardar y regresar */}
         <View style={styles.buttonContainer}>
-          <Button mode="contained" onPress={guardarEntrenador}>
-            Guardar
-          </Button>
-          <Button mode="outlined" onPress={() => navigation.navigate('Index')}>
-            Regresar
-          </Button>
+          <TouchableOpacity onPress={guardarEntrenador} style={[styles.button, styles.saveButton]}>
+            <Text style={styles.buttonText}>Guardar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Index')} 
+            style={[styles.button, styles.cancelButton]}>
+            <Text style={styles.buttonText}>Regresar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -123,28 +122,47 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    marginBottom: 20,
-  },
-  picker: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
+   },
+   label: {
+       fontSize: 16,
+       fontWeight: 'bold',
+       marginBottom: 10,
+   },
+   input:{
+       height :40 ,
+       borderColor :'gray' ,
+       borderWidth :1 ,
+       paddingHorizontal :10 ,
+       marginBottom :20 ,
+   },
+   picker:{
+       width :'100%' ,
+       marginBottom :20 ,
+   },
+   buttonContainer:{
+       flexDirection:'row',
+       justifyContent:'space-between',
+       marginTop :10 ,
+   },
+   button:{
+       paddingVertical :10 ,
+       paddingHorizontal :15 ,
+       borderRadius :5 ,
+       elevation :2 ,
+       width:'45%',
+   },
+   saveButton:{
+       backgroundColor:'#007bff' ,
+   },
+   cancelButton:{
+       backgroundColor:'#dc3545' ,
+   },
+   buttonText:{
+       color:'#fff' ,
+       textAlign:'center' ,
+       fontWeight:'bold' ,
+   }
 });
 
-export default Edit;
+export default EditEntrenador;
+

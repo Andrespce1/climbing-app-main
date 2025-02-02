@@ -1,32 +1,40 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import Swal from 'react-native-swal'; // Debes instalar este paquete para usar Swal en React Native
+import axios from 'axios'; // Para realizar llamadas a la API
 
-const Delete = ({ juez, onDelete }) => {
+const Delete = ({ route, navigation }) => {
+  const { juez } = route.params; // Asegúrate de que el juez se pasa correctamente
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleDelete = () => {
-    Swal.fire({
-      title: '¿Está seguro de Deshabilitarlo?',
-      text: "No se podrá revertir!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Deshabilitar',
-      cancelButtonText: 'Cancelar'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setIsSubmitting(true);
-        onDelete(juez.IdJuez)
-          .then(() => {
-            Swal.fire('Deshabilitado!', '', 'success');
-          })
-          .finally(() => {
-            setIsSubmitting(false);
-          });
-      }
-    });
+  const handleDelete = async () => {
+    Alert.alert(
+      '¿Está seguro de Deshabilitarlo?',
+      "No se podrá revertir!",
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Deshabilitar',
+          onPress: async () => {
+            setIsSubmitting(true);
+            try {
+              // Realiza la llamada a la API para deshabilitar al juez
+              await axios.delete(`http://tu-api.com/api/Juez/${juez.IdJuez}`);
+              Alert.alert('Deshabilitado!', '', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+            } catch (error) {
+              console.error('Error al deshabilitar el juez:', error);
+              Alert.alert('Error', 'No se pudo deshabilitar al juez. Intenta nuevamente.');
+            } finally {
+              setIsSubmitting(false);
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
 
   return (
@@ -43,9 +51,9 @@ const Delete = ({ juez, onDelete }) => {
         <Text style={styles.label}>¿Es Juez Principal?</Text>
         <Text style={styles.value}>{juez.PrincipalJuez ? 'Sí' : 'No'}</Text>
         <Text style={styles.label}>Provincia</Text>
-        <Text style={styles.value}>{juez.IdProNavigation.NombrePro}</Text>
+        <Text style={styles.value}>{juez.IdProNavigation?.NombrePro || 'N/A'}</Text>
         <Text style={styles.label}>Usuario</Text>
-        <Text style={styles.value}>{juez.IdUsuNavigation.NombreUsu}</Text>
+        <Text style={styles.value}>{juez.IdUsuNavigation?.NombreUsu || 'N/A'}</Text>
         <Text style={styles.label}>Estado</Text>
         <Text style={styles.value}>{juez.ActivoJuez ? 'Activo' : 'Inactivo'}</Text>
       </View>
@@ -59,7 +67,7 @@ const Delete = ({ juez, onDelete }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.cancelButton]}
-          onPress={() => navigation.goBack()} // Asumo que estás utilizando React Navigation
+          onPress={() => navigation.goBack()}
         >
           <Text style={styles.buttonText}>Regresar</Text>
         </TouchableOpacity>
@@ -105,10 +113,10 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   deleteButton: {
-    backgroundColor: '#3085d6',
+    backgroundColor: '#d33',
   },
   cancelButton: {
-    backgroundColor: '#d33',
+    backgroundColor: '#ccc',
   },
   buttonText: {
     fontSize: 16,

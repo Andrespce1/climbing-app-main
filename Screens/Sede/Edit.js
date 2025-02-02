@@ -1,55 +1,74 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native'; // Importa useNavigation y useRoute
+import api from '../../services/api'; // Asegúrate de importar tu API
 
-const Edit = ({ sede, navigation, onSubmit }) => {
-  const [nombreSede, setNombreSede] = useState(sede.NombreSede);
+const EditSede = () => {
+  const navigation = useNavigation(); // Inicializa la navegación
+  const route = useRoute(); // Obtiene los parámetros de la ruta
+  const sede = route.params.club; // Obtener el objeto club pasado como parámetro
 
-  const handleSubmit = () => {
-    const sedeActualizada = {
-      IdSede: sede.IdSede,
-      NombreSede: nombreSede,
-    };
-    onSubmit(sedeActualizada);
+  // Inicializar los estados
+  const [nombreSede, setNombreSede] = useState(sede.nombreSede || ''); // Inicializa con el nombre de la sede
+
+  const guardarSede = async () => {
+    if (!nombreSede) {
+      Alert.alert('Error', 'Por favor completa todos los campos.');
+      return;
+    }
+    try {
+      const response = await api.put(`/api/Sede/${sede.idSede}`, { // Asegúrate de usar el ID correcto
+        nombreSede,
+      });
+      console.log('Sede actualizada:', response.data);
+      Alert.alert('Éxito', 'Sede actualizada con éxito');
+      navigation.navigate('Index'); // Regresar a la lista de sedes
+    } catch (error) {
+      console.error('Error guardando sede:', error);
+      Alert.alert('Error', 'No se pudo actualizar la sede');
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>EDITAR</Text>
-      <Text style={styles.subtitle}>Sede</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.titulo}>EDITAR SEDE</Text>
       <View style={styles.formContainer}>
-        <Text style={styles.label}>Nombre de Sede:</Text>
+        <Text style={styles.label}>Nombre de la Sede:</Text>
         <TextInput
           style={styles.input}
           value={nombreSede}
-          onChangeText={(text) => setNombreSede(text)}
+          onChangeText={setNombreSede}
+          placeholder="Ingrese el nombre de la sede"
         />
+
+        {/* Botones para guardar y regresar */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <TouchableOpacity onPress={guardarSede} style={[styles.button, styles.saveButton]}>
             <Text style={styles.buttonText}>Guardar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
+
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.button, styles.cancelButton]}>
             <Text style={styles.buttonText}>Regresar</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
+
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 30,
+    backgroundColor: '#fff',
+    padding: 20,
   },
-  title: {
+  titulo: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 18,
-    marginBottom: 20,
   },
   formContainer: {
     marginBottom: 20,
@@ -63,24 +82,32 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
-    padding: 10,
-    marginBottom: 15,
+    paddingHorizontal: 10,
+    marginBottom: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 10,
   },
   button: {
-    width: '45%',
     paddingVertical: 10,
+    paddingHorizontal: 15,
     borderRadius: 5,
+    elevation: 2,
+    width: '45%',
+  },
+  saveButton: {
     backgroundColor: '#007bff',
   },
+  cancelButton: {
+    backgroundColor: '#dc3545',
+  },
   buttonText: {
-    fontSize: 16,
     color: '#fff',
     textAlign: 'center',
-  },
+    fontWeight: 'bold',
+  }
 });
 
-export default Edit;
+export default EditSede;

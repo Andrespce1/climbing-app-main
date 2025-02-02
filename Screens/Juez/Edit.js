@@ -1,93 +1,131 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Picker, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
+import api from '../../services/api';
 
-const Edit = ({ juez, navigation, listaEstados, listaProvincias, listaUsuarios, listaEstados2, onSubmit }) => {
-  const [nombresJuez, setNombresJuez] = useState(juez.NombresJuez);
-  const [apellidosJuez, setApellidosJuez] = useState(juez.ApellidosJuez);
-  const [cedulaJuez, setCedulaJuez] = useState(juez.CedulaJuez);
-  const [principalJuez, setPrincipalJuez] = useState(juez.PrincipalJuez);
-  const [idPro, setIdPro] = useState(juez.IdPro);
-  const [idUsu, setIdUsu] = useState(juez.IdUsu);
-  const [activoJuez, setActivoJuez] = useState(juez.ActivoJuez);
+const Edit = () => {
+  const route = useRoute();
+  const { juez } = route.params;
+  const navigation = useNavigation();
 
-  const handleSubmit = () => {
-    const juezActualizado = {
-      IdJuez: juez.IdJuez,
-      NombresJuez: nombresJuez,
-      ApellidosJuez: apellidosJuez,
-      CedulaJuez: cedulaJuez,
-      PrincipalJuez: principalJuez,
-      IdPro: idPro,
-      IdUsu: idUsu,
-      ActivoJuez: activoJuez,
-    };
-    onSubmit(juezActualizado);
+  // Validar que el objeto juez y su id estén definidos
+  if (!juez || juez.id === undefined) {
+    Alert.alert('Error', 'No se ha proporcionado un juez válido.');
+    navigation.goBack();
+    return null;
+  }
+
+  // Inicializar estados
+  const [nombresJuez, setNombresJuez] = useState(juez.nombresJuez || "");
+  const [apellidosJuez, setApellidosJuez] = useState(juez.apellidosJuez || "");
+  const [cedulaJuez, setCedulaJuez] = useState(juez.cedulaJuez || "");
+  const [principalJuez, setPrincipalJuez] = useState(juez.principalJuez || false);
+  const [idPro, setIdPro] = useState(juez.idPro || "");
+  const [idUsu, setIdUsu] = useState(juez.idUsu || "");
+  const [activoJuez, setActivoJuez] = useState(juez.activoJuez || true);
+
+  const [listaEstados, setListaEstados] = useState([]);
+  const [listaProvincias, setListaProvincias] = useState([]);
+
+  useEffect(() => {
+    loadOptions();
+  }, []);
+
+  const loadOptions = async () => {
+    try {
+      // Cargar provincias
+      const provinciasResponse = await api.get('/api/Provincia');
+      console.log('Datos de provincias:', provinciasResponse.data);
+      setListaProvincias(provinciasResponse.data);
+
+      // Cargar estados
+      const estados = [
+        { label: 'Sí', value: true },
+        { label: 'No', value: false },
+      ];
+      setListaEstados(estados);
+    } catch (error) {
+      console.error('Error cargando opciones:', error.response ? error.response.data : error.message);
+    }
+  };
+
+  const handleGuardar = async () => {
+    try {
+      // Crear objeto con los datos a enviar
+      const datosJuez = {
+        idJuez: juez.idJuez, // Usa el campo correcto (idJuez en lugar de id)
+        nombresJuez: nombresJuez,
+        apellidosJuez: apellidosJuez,
+        cedulaJuez: cedulaJuez,
+        principalJuez: principalJuez,
+        idPro: idPro,
+        idUsu: idUsu,
+        activoJuez: activoJuez,
+      };
+  
+      console.log('Datos del juez a guardar:', datosJuez); // Imprimir para verificar
+  
+      // Enviar la solicitud PUT
+      const response = await api.put(`/api/Juez/${juez.idJuez}`, datosJuez);
+      console.log('Juez actualizado:', response.data);
+      Alert.alert('Éxito', 'Los cambios se han guardado correctamente');
+      navigation.goBack(); // Regresar a la pantalla anterior
+    } catch (error) {
+      console.error('Error al guardar el juez:', error.response ? error.response.data : error.message);
+      Alert.alert('Error', 'No se pudo guardar el juez: ' + (error.response ? JSON.stringify(error.response.data) : 'Error desconocido'));
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>EDITAR</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>EDITAR JUEZ</Text>
       <View style={styles.formContainer}>
         <TextInput
           style={styles.input}
           placeholder="Nombres"
           value={nombresJuez}
-          onChangeText={(text) => setNombresJuez(text)}
+          onChangeText={setNombresJuez}
         />
         <TextInput
           style={styles.input}
           placeholder="Apellidos"
           value={apellidosJuez}
-          onChangeText={(text) => setApellidosJuez(text)}
+          onChangeText={setApellidosJuez}
         />
         <TextInput
           style={styles.input}
           placeholder="Cédula"
           value={cedulaJuez}
-          onChangeText={(text) => setCedulaJuez(text)}
+          onChangeText={setCedulaJuez}
         />
-        <Text style={styles.label}>¿Es Juez Principal?</Text>
-        <Picker
-          selectedValue={principalJuez}
-          onValueChange={(itemValue) => setPrincipalJuez(itemValue)}
-        >
-          <Picker.Item label="--Elija la opción--" value="" />
-          {listaEstados.map((estado) => (
-            <Picker.Item key={estado.value} label={estado.label} value={estado.value} />
-          ))}
-        </Picker>
-        <Text style={styles.label}>Provincia</Text>
-        <Picker
-          selectedValue={idPro}
-          onValueChange={(itemValue) => setIdPro(itemValue)}
-        >
-          <Picker.Item label="--Elija la Provincia--" value="" />
-          {listaProvincias.map((provincia) => (
-            <Picker.Item key={provincia.value} label={provincia.label} value={provincia.value} />
-          ))}
-        </Picker>
-        <Text style={styles.label}>Usuario</Text>
-        <Picker
-          selectedValue={idUsu}
-          onValueChange={(itemValue) => setIdUsu(itemValue)}
-        >
-          <Picker.Item label="--Elija un Usuario--" value="" />
-          {listaUsuarios.map((usuario) => (
-            <Picker.Item key={usuario.value} label={usuario.label} value={usuario.value} />
-          ))}
-        </Picker>
-        <Text style={styles.label}>Estado</Text>
-        <Picker
-          selectedValue={activoJuez}
-          onValueChange={(itemValue) => setActivoJuez(itemValue)}
-        >
-          <Picker.Item label="--Elija un Estado--" value="" />
-          {listaEstados2.map((estado) => (
-            <Picker.Item key={estado.value} label={estado.label} value={estado.value} />
-          ))}
-        </Picker>
+
+        {/* Selector de Provincia */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Provincia</Text>
+          <Picker selectedValue={idPro} style={styles.select} onValueChange={(itemValue) => setIdPro(itemValue)}>
+            <Picker.Item label="--Elija la Provincia--" value="" />
+            {listaProvincias.map((provincia) => (
+              <Picker.Item label={provincia.nombrePro} value={provincia.idPro} key={provincia.idPro} />
+            ))}
+          </Picker>
+        </View>
+
+        {/* Selector de Estado */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>¿Es Juez Principal?</Text>
+          <Picker
+            selectedValue={principalJuez ? 'true' : 'false'}
+            style={styles.select}
+            onValueChange={(itemValue) => setPrincipalJuez(itemValue === 'true')}
+          >
+            <Picker.Item label="Sí" value="true" />
+            <Picker.Item label="No" value="false" />
+          </Picker>
+        </View>
+
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <TouchableOpacity style={styles.button} onPress={handleGuardar}>
             <Text style={styles.buttonText}>Guardar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
@@ -95,7 +133,7 @@ const Edit = ({ juez, navigation, listaEstados, listaProvincias, listaUsuarios, 
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -104,6 +142,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 30,
+    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,

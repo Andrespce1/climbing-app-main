@@ -1,40 +1,38 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Linking } from 'react-native';
+import { useNavigation } from '@react-navigation/native'; // Importa useNavigation
 
-const Details = ({ juez, navigation }) => {
+const Details = ({ route }) => {
+  const navigation = useNavigation(); // Inicializa la navegación
+  const { juez } = route.params; // Desestructuramos el objeto juez desde los parámetros de la ruta
+
+  // Verifica si el juez existe
+  if (!juez) {
+    return (
+      <View style={styles.container}>
+        <Text>No se encontró información del juez.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>DETALLES</Text>
       <View style={styles.infoContainer}>
         <Text style={styles.label}>Nombres</Text>
-        <Text style={styles.value}>{juez.NombresJuez}</Text>
+        <Text style={styles.value}>{juez.nombresJuez}</Text>
         <Text style={styles.label}>Apellidos</Text>
-        <Text style={styles.value}>{juez.ApellidosJuez}</Text>
+        <Text style={styles.value}>{juez.apellidosJuez}</Text>
         <Text style={styles.label}>Cédula</Text>
-        <Text style={styles.value}>{juez.CedulaJuez}</Text>
+        <Text style={styles.value}>{juez.cedulaJuez}</Text>
         <Text style={styles.label}>¿Es Juez Principal?</Text>
-        <Text style={styles.value}>{juez.PrincipalJuez ? 'Sí' : 'No'}</Text>
+        <Text style={styles.value}>{juez.principalJuez ? 'Sí' : 'No'}</Text>
         <Text style={styles.label}>Provincia</Text>
-        <Text style={styles.value}>{juez.IdProNavigation.NombrePro}</Text>
+        <Text style={styles.value}>{juez.idProNavigation?.nombrePro || 'No disponible'}</Text> {/* Manejo seguro */}
         <Text style={styles.label}>Usuario</Text>
-        <Text style={styles.value}>{juez.IdUsuNavigation.NombreUsu}</Text>
+        <Text style={styles.value}>{juez.idUsuNavigation?.nombreUsu || 'No disponible'}</Text> {/* Manejo seguro */}
         <Text style={styles.label}>Estado</Text>
-        <Text style={styles.value}>{juez.ActivoJuez ? 'Activo' : 'Inactivo'}</Text>
-      </View>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.editButton]}
-          onPress={() => navigation.navigate('EditarJuez', { idJuez: juez.IdJuez })}
-        >
-          <Text style={styles.buttonText}>Editar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.buttonText}>Regresar</Text>
-        </TouchableOpacity>
+        <Text style={styles.value}>{juez.activoJuez ? 'Activo' : 'Inactivo'}</Text>
       </View>
     </View>
   );

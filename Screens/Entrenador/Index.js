@@ -1,83 +1,151 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Button } from 'react-native';
-import { TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import api from '../../services/api'; // Asegúrate de que esta ruta sea correcta
 
-const Index = () => {
+const IndexEntrenador = ({ navigation }) => {
   const [entrenadores, setEntrenadores] = useState([]);
-  const [searchFor, setSearchFor] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isAdminOrEntrenador, setIsAdminOrEntrenador] = useState(false);
 
   useEffect(() => {
-    // Aquí debes implementar la lógica para obtener la lista de entrenadores desde el servidor
-    // Puedes utilizar fetch o Axios para obtener los datos
-    const entrenadoresMock = [
-      { id: 1, nombres: 'Juan', apellidos: 'Pérez', cedula: '1234567890', provincia: 'Provincia 1', usuario: 'Usuario 1', estado: true },
-      { id: 2, nombres: 'María', apellidos: 'Gómez', cedula: '9876543210', provincia: 'Provincia 2', usuario: 'Usuario 2', estado: false },
-    ];
-    setEntrenadores(entrenadoresMock);
+    loadEntrenadores(); // Llamar a la API para obtener datos
+    checkUserRole(); // Simulando User.IsInRole
   }, []);
 
-  const handleSearch = (text) => {
-    setSearchFor(text);
-    // Aquí debes implementar la lógica para buscar entrenadores según el texto ingresado
-    // Puedes utilizar filter para filtrar la lista de entrenadores
-    const entrenadoresFiltrados = entrenadores.filter((entrenador) =>
-      entrenador.nombres.toLowerCase().includes(text.toLowerCase()) ||
-      entrenador.apellidos.toLowerCase().includes(text.toLowerCase()) ||
-      entrenador.cedula.includes(text)
-    );
-    setEntrenadores(entrenadoresFiltrados);
+  const loadEntrenadores = async () => {
+    try {
+      const response = await api.get('/api/Entrenador'); // Llamada a la API para obtener entrenadores
+      console.log('Datos de Entrenador:', response.data); // Verifica aquí que los datos son correctos
+      setEntrenadores(response.data);
+    } catch (error) {
+      console.error('Error cargando Entrenadores:', error);
+    }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.item}>
-      <Text style={styles.label}>Nombres:</Text>
-      <Text style={styles.value}>{item.nombres}</Text>
-      <Text style={styles.label}>Apellidos:</Text>
-      <Text style={styles.value}>{item.apellidos}</Text>
-      <Text style={styles.label}>Cédula:</Text>
-      <Text style={styles.value}>{item.cedula}</Text>
-      <Text style={styles.label}>Provincia:</Text>
-      <Text style={styles.value}>{item.provincia}</Text>
-      <Text style={styles.label}>Usuario:</Text>
-      <Text style={styles.value}>{item.usuario}</Text>
-      <Text style={styles.label}>Estado:</Text>
-      <Text style={styles.value}>{item.estado ? 'Activo' : 'Inactivo'}</Text>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={() => console.log('Editar', item.id)}>
-          <Text style={styles.button}>Editar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Detalles', item.id)}>
-          <Text style={styles.button}>Detalles</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Deshabilitar', item.id)}>
-          <Text style={styles.button}>Deshabilitar</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const checkUserRole = () => {
+    setIsAdminOrEntrenador(true); // Cambiar según la lógica de autenticación
+  };
+
+  const handleSearch = (text) => {
+    setSearchQuery(text); // Actualiza el estado de searchQuery
+
+    if (!text.trim()) {
+      loadEntrenadores(); // Si el campo está vacío, recarga todos los jueces
+      return;
+    }
+
+    const filtered = entrenadores.filter(entrenador => {
+      const nombres = entrenador.nombresEnt ? entrenador.nombresEnt.toLowerCase() : '';
+      const apellidos = entrenador.apellidosEnt ? entrenador.apellidosEnt.toLowerCase() : '';
+      const cedula = entrenador.cedulaEnt ? entrenador.cedulaEnt.toLowerCase() : '';
+
+      return (
+        nombres.includes(text.toLowerCase()) ||
+        apellidos.includes(text.toLowerCase()) ||
+        cedula.includes(text)
+      );
+    });
+
+    console.log('Resultados filtrados:', filtered); // Imprime los resultados filtrados
+    setEntrenadores(filtered); // Actualiza el estado con los resultados filtrados
+  };
+
+
+  const handleCreate = () => {
+    navigation.navigate('CreateEntrenador'); // Redirigir a CrearEntrenador
+  };
+
+  const handleEdit = (idEnt) => {
+    const entrenador = entrenadores.find(e => e.idEnt === idEnt);
+
+    if (entrenador) {
+      console.log('Entrenador encontrado:', entrenador); // Verifica que se haya encontrado
+      navigation.navigate('EditEntrenador', { entrenador }); // Pasa el objeto completo
+    } else {
+      console.error('Entrenador no encontrado con ID:', idEnt);
+    }
+  };
+
+  const handleDetails = (idEnt) => {
+    const entrenador = entrenadores.find(d => d.idEnt === idEnt);
+    if (entrenador) {
+      navigation.navigate('DetailsEntrenador', { entrenador }); // Pasa el objeto entrenador completo
+    } else {
+      console.error('Entrenador no encontrado con ID:', idEnt);
+    }
+  };
+
+  const handleDelete = (id) => {
+    // Muestra una alerta de confirmación
+    Alert.alert(
+      'Confirmar Eliminación',
+      '¿Estás seguro de que deseas eliminar este Entrenador?',
+      [
+        {
+          text: 'Cancelar',
+          onPress: () => console.log('Eliminación cancelada'),
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/Entrenador/${id}`);
+              setEntrenadores(entrenadores.filter(j => j.idEntrenador !== id));
+              Alert.alert('Éxito', 'Entrenador eliminado con éxito');
+            } catch (err) {
+              console.error(err);
+              Alert.alert('Error', 'No se pudo eliminar el Entrenador');
+            }
+          },
+        },
+      ],
+      { cancelable: false } // Evita que se cierre al tocar fuera del diálogo
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>LISTA DE ENTRENADORES</Text>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          value={searchFor}
-          onChangeText={(text) => handleSearch(text)}
-          placeholder="Buscar..."
-        />
-        <Button title="Buscar" onPress={() => handleSearch(searchFor)} />
-      </View>
+      {isAdminOrEntrenador && (
+        <View style={styles.adminSection}>
+          <Text style={styles.adminTitle}>ADMINISTRACIÓN DE ENTRENADORES</Text>
+          <Button title="Crear" onPress={handleCreate} />
+        </View>
+      )}
+
+      <TextInput
+        value={searchQuery}
+        onChangeText={handleSearch} // Llama a handleSearch al cambiar el texto
+        placeholder="Buscar ..."
+        style={styles.searchInput}
+      />
+
       <FlatList
         data={entrenadores}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.itemContainer}>
+            <Text style={styles.itemText}>Nombres: {item.nombresEnt}</Text>
+            <Text style={styles.itemText}>Apellidos: {item.apellidosEnt}</Text>
+            <Text style={styles.itemText}>Cédula: {item.cedulaEnt}</Text>
+            <Text style={styles.itemText}>Estado: {item.activoEnt ? 'Activo' : 'Inactivo'}</Text>
+
+            {isAdminOrEntrenador && (
+              <View style={styles.buttonsContainer}>
+                <TouchableOpacity onPress={() => handleEdit(item.idEnt)} style={[styles.button, styles.editButton]}>
+                  <Text style={styles.buttonText}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDetails(item.idEnt)} style={[styles.button, styles.detailsButton]}>
+                  <Text style={styles.buttonText}>Detalles</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.idEnt)} style={[styles.button, styles.deleteButton]}>
+                  <Text style={styles.buttonText}>Deshabilitar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+        keyExtractor={(item) => item.idEnt.toString()}
       />
-      <View style={styles.createButtonContainer}>
-        <TouchableOpacity onPress={() => console.log('Crear')}>
-          <Text style={styles.createButton}>Crear</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -89,56 +157,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 30,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  adminSection: {
+    marginBottom: 15,
+    alignItems: 'center',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+  adminTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
   searchInput: {
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
     paddingHorizontal: 10,
-    width: '80%',
-  },
-  item: {
     marginBottom: 20,
-    padding: 20,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 10,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  itemContainer: {
+    backgroundColor: '#f9f9f9',
+    padding: 20,
+    borderRadius: 10,
     marginBottom: 10,
   },
-  value: {
+  itemText: {
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 5,
   },
-  buttonContainer: {
+  buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginTop: 10,
   },
   button: {
-    fontSize: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    elevation: 2,
+    width: '30%',
+  },
+  editButton: {
+    backgroundColor: '#007bff',
+  },
+  detailsButton: {
+    backgroundColor: '#17a2b8',
+  },
+  deleteButton: {
+    backgroundColor: '#dc3545',
+  },
+  buttonText: {
+    color: '#fff',
+    textAlign: 'center',
     fontWeight: 'bold',
-    color: '#007bff',
-  },
-  createButtonContainer: {
-    marginBottom: 20,
-  },
-  createButton: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007bff',
-  },
+  }
 });
 
-export default Index;
+export default IndexEntrenador;

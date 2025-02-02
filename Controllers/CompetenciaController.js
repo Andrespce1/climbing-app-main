@@ -1,460 +1,180 @@
-import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { notification } from 'react-notifyify';
-import APIConsumer from './APIConsumer';
 
-const CompetenciaController = () => {
-  const [competencia, setCompetencia] = useState({});
-  const [listaCategorias, setListaCategorias] = useState([]);
-  const [listaGeneros, setListaGeneros] = useState([]);
-  const [listaModalidades, setListaModalidades] = useState([]);
-  const [listaSedes, setListaSedes] = useState([]);
-  const [listaJueces, setListaJueces] = useState([]);
-  const [listaPosiciones, setListaPosiciones] = useState([]);
-  const [listaEstados, setListaEstados] = useState([]);
+import api from '../services/api'; // Asegúrate de importar tu instancia de API
 
-  useEffect(() => {
-    axios.get('/api/competencias')
-      .then(response => {
-        setCompetencia(response.data);
-      })
-      .catch(error => {
-        console.error(error);
-      });
-  }, []);
-
-  const validarRol = (rol) => {
-    return rol.includes('Administrador') || rol.includes('Juez');
-  };
-
-  const handleIndex = () => {
-    const data = APIConsumer.Competencium.Select(apiUrl);
-    setListaCategorias(data.Categorias);
-    setListaGeneros(data.Generos);
-    setListaModalidades(data.Modalidades);
-    setListaSedes(data.Sedes);
-    setListaJueces(data.Jueces);
-    setListaPosiciones(data.Posiciones);
-    setListaEstados(data.Estados);
-  };
-
-  const handleDetails = (id) => {
-    const data = APIConsumer.Competencium.SelectOne(apiUrl + id);
-    setCompetencia(data);
-  };
-
-  const handleCreate = (competencia) => {
+const CompetenciaController = {
+  // Obtener todas las competencias, con opción de búsqueda
+  async getCompetencias(searchFor = '') {
     try {
-      APIConsumer.Competencium.Insert(apiUrl, competencia);
-      setCompetencia(competencia);
-      notification.success('Competencia creada con éxito', 'Competencia creada');
+      const url = searchFor ? `${apiUrl}?searchFor=${searchFor}` : apiUrl;
+      const response = await axios.get(url);
+      return response.data;
     } catch (error) {
-      notification.error('Error al crear competencia', error.Message);
+      console.error('Error fetching competencias:', error);
+      throw error;
     }
-  };
+  },
 
-  const handleEdit = (id, competencia) => {
+  // Obtener una competencia por su ID
+  async getCompetenciaById(id) {
     try {
-      APIConsumer.Competencium.Update(apiUrl + id, competencia);
-      setCompetencia(competencia);
-      notification.success('Competencia editada con éxito', 'Competencia editada');
+      const response = await axios.get(`${apiUrl}${id}`);
+      return response.data;
     } catch (error) {
-      notification.error('Error al editar competencia', error.Message);
+      console.error('Error fetching competencia by id:', error);
+      throw error;
     }
-  };
+  },
 
-  const handleDelete = (id) => {
+  // Crear una nueva competencia
+  async createCompetencia(competencia) {
     try {
-      APIConsumer.Competencium.Delete(apiUrl + id);
-      setCompetencia(competencia);
-      notification.success('Competencia eliminada con éxito', 'Competencia eliminada');
+      const response = await axios.post(apiUrl, competencia);
+      return response.data;
     } catch (error) {
-      notification.error('Error al eliminar competencia', error.Message);
+      console.error('Error creating competencia:', error);
+      throw error;
     }
-  };
+  },
 
-  const listaModalidades = () => {
-    const data = APIConsumer.Modalidad.Select(apiUrl.Replace("Competencia", "Modalidad"));
-    const lista = data.Select(f => new Modalidad
-      {
-        IdMod = f.IdMod,
-        DescripcionMod = f.DescripcionMod
-      });
-    return lista;
-  };
+  // Actualizar una competencia existente
+  async updateCompetencia(id, competencia) {
+    try {
+      const response = await axios.put(`${apiUrl}${id}`, competencia);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating competencia:', error);
+      throw error;
+    }
+  },
 
-  const listaCategorias = () => {
-    const data = APIConsumer.Categorium.Select(apiUrl.Replace("Competencia", "Categoria"));
-    const lista = data.Select(f => new Categorium
-      {
-        IdCat = f.IdCat,
-        NombreCat = f.NombreCat
-      });
-    return lista;
-  };
+  // Eliminar una competencia (marcar como inactiva)
+  async deleteCompetencia(id) {
+    try {
+      const competencia = await this.getCompetenciaById(id);
+      competencia.activo = false; // Marcar como inactivo
+      const response = await axios.put(`${apiUrl}${id}`, competencia);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting competencia:', error);
+      throw error;
+    }
+  },
 
-  const listaGeneros = () => {
-    const data = APIConsumer.Genero.Select(apiUrl.Replace("Competencia", "Genero"));
-    const lista = data.Select(f => new Genero
-      {
-        IdGen = f.IdGen,
-        NombreGen = f.NombreGen
-      });
-    return lista;
-  };
+  // Obtener listados de categorías, géneros, modalidades, jueces y sedes
+  async getListadoCategorias() {
+    try {
+      const response = await axios.get(apiUrl.replace('Competencia', 'Categoria'));
+      return response.data.map(cat => ({ value: cat.id, text: cat.nombre }));
+    } catch (error) {
+      console.error('Error fetching categorias:', error);
+      throw error;
+    }
+  },
 
-  const listaSedes = () => {
-    const data = APIConsumer.Sede.Select(apiUrl.Replace("Competencia", "Sede"));
-    const lista = data.Select(f => new Sede
-      {
-        IdSede = f.IdSede,
-        NombreSede = f.NombreSede
-      });
-    return lista;
-  };
+  async getListadoGeneros() {
+    try {
+      const response = await axios.get(apiUrl.replace('Competencia', 'Genero'));
+      return response.data.map(gen => ({ value: gen.id, text: gen.nombre }));
+    } catch (error) {
+      console.error('Error fetching generos:', error);
+      throw error;
+    }
+  },
 
-  const listaJueces = () => {
-    const data = APIConsumer.Juez.Select(apiUrl.Replace("Competencia", "Juez"));
-    const lista = data.Select(f => new Juez
-      {
-        IdJuez = f.IdJuez,
-        NombresJuez = f.NombresJuez,
-        ApellidosJuez = f.ApellidosJuez
-      });
-    return lista;
-  };
+  async getListadoModalidades() {
+    try {
+      const response = await axios.get(apiUrl.replace('Competencia', 'Modalidad'));
+      return response.data.map(mod => ({ value: mod.id, text: mod.descripcion }));
+    } catch (error) {
+      console.error('Error fetching modalidades:', error);
+      throw error;
+    }
+  },
 
-  const listaEstados = () => {
-    const lista = [
-      { Text: 'Activo', Value: 'true' },
-      { Text: 'Inactivo', Value: 'false' }
-    ];
-    return lista;
-  };
+  async getListadoJueces() {
+    try {
+      const response = await axios.get(apiUrl.replace('Competencia', 'Juez'));
+      return response.data.map(juez => ({
+        value: juez.id,
+        text: `${juez.nombres} ${juez.apellidos}`,
+      }));
+    } catch (error) {
+      console.error('Error fetching jueces:', error);
+      throw error;
+    }
+  },
 
-  const listaClasificaciones = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+  async getListadoSedes() {
+    try {
+      const response = await axios.get(apiUrl.replace('Competencia', 'Sede'));
+      return response.data.map(sede => ({ value: sede.id, text: sede.nombre }));
+    } catch (error) {
+      console.error('Error fetching sedes:', error);
+      throw error;
+    }
+  },
 
-  const listaPosiciones = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+  // Agregar un resultado a una competencia
+  async agregarResultado(id, result, fase) {
+    try {
+      const detalle = await axios.get(`${apiUrl.replace('Competencia', 'DetalleCompetencia')}${id}`);
+      let updatedDetalle = detalle.data;
 
-  const listaClasificacionesOctavos = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id && f.ClasRes != 'fs' && f.ClasRes != 'fall');
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+      if (fase === 'octavos') {
+        updatedDetalle.octavosRes = result;
+      } else if (fase === 'cuartos') {
+        updatedDetalle.cuartosRes = result;
+      } else if (fase === 'semi') {
+        updatedDetalle.semiRes = result;
+      } else if (fase === 'final') {
+        updatedDetalle.finalRes = result;
+      }
 
-  const listaClasificacionesSemi = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+      const response = await axios.put(`${apiUrl.replace('Competencia', 'DetalleCompetencia')}${id}`, updatedDetalle);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding result:', error);
+      throw error;
+    }
+  },
 
-  const listaClasificacionesFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+  // Obtener la clasificación de una competencia
+  async getClasificacion(id) {
+    try {
+      const response = await axios.get(`${apiUrl.replace('Competencia', 'DetalleCompetencia')}?idCom=${id}`);
+      const detalles = response.data;
 
-  const listaClasificacionesCuartos = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+      // Filtrar y ordenar los resultados
+      const resultadosOrdenados = detalles
+        .filter(detalle => detalle.clasRes && detalle.clasRes !== 'fs' && detalle.clasRes !== 'fall')
+        .map(detalle => ({
+          ...detalle,
+          tiempo: parseFloat(detalle.clasRes),
+        }))
+        .sort((a, b) => a.tiempo - b.tiempo);
 
-  const listaClasificacionesOctavosCuartos = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id && f.ClasRes != 'fs' && f.ClasRes != 'fall');
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+      return resultadosOrdenados;
+    } catch (error) {
+      console.error('Error fetching clasificacion:', error);
+      throw error;
+    }
+  },
 
-  const listaClasificacionesOctavosCuartosSemi = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id && f.ClasRes != 'fs' && f.ClasRes != 'fall');
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+  // Simular enfrentamientos entre deportistas
+  async enfrentar(deportista1, deportista2, fase) {
+    const tiempo1 = parseFloat(deportista1[`${fase}Res`]);
+    const tiempo2 = parseFloat(deportista2[`${fase}Res`]);
 
-  const listaClasificacionesOctavosCuartosSemiFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id && f.ClasRes != 'fs' && f.ClasRes != 'fall');
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+    if (isNaN(tiempo1) || deportista1[`${fase}Res`] === 'fs' || deportista1[`${fase}Res`] === 'fall') {
+      return deportista2;
+    }
+    if (isNaN(tiempo2) || deportista2[`${fase}Res`] === 'fs' || deportista2[`${fase}Res`] === 'fall') {
+      return deportista1;
+    }
 
-  const listaClasificacionesOctavosCuartosSemiFinalFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id && f.ClasRes != 'fs' && f.ClasRes != 'fall');
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
+    return tiempo1 < tiempo2 ? deportista1 : deportista2;
+  },
+};
 
-  const listaClasificacionesCuartosSemi = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosSemiFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosFinalFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosSemiFinalFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosSemiFinalFinalFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosSemiFinalFinalFinalFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosSemiFinalFinalFinalFinal = (id) => {
-    const data = APIConsumer.DetalleCompetencium.Select(apiUrl.Replace("Competencia", "DetalleCompetencia"))
-      .Where(f => f.IdCom == id);
-    const lista = data.Select(f => new DetalleCompetencium
-      {
-        IdCom = f.IdCom,
-        IdDep = f.IdDep,
-        ClasRes = f.ClasRes,
-        CuartosRes = f.CuartosRes,
-        FinalRes = f.FinalRes,
-        IdDetalle = f.IdDetalle,
-        OctavosRes = f.OctavosRes,
-        Puesto = f.Puesto,
-        SemiRes = f.SemiRes
-      });
-    return lista;
-  };
-
-  const listaClasificacionesCuartosSemiFinalFinalFinalFinal = (id) => {
-    const data = APIConsumer.Detalle
+export default CompetenciaController;
